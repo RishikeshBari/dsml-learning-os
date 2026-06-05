@@ -9,16 +9,30 @@ import {
   RotateCcw,
   Settings,
   Sun,
+  type LucideIcon,
 } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { clsx } from "clsx";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/features/auth/useAuth";
 import { useTheme } from "@/features/theme/useTheme";
 
-const navItems = [
-  { label: "Today", icon: CalendarClock },
-  { label: "Topics", icon: BookOpenCheck },
-  { label: "Revisions", icon: RotateCcw },
+type NavItem = {
+  icon: LucideIcon;
+  label: string;
+  path?: string;
+  shortLabel?: string;
+};
+
+const navItems: NavItem[] = [
+  {
+    icon: CalendarClock,
+    label: "Today Dashboard",
+    path: "/",
+    shortLabel: "Today",
+  },
+  { icon: BookOpenCheck, label: "Topics", path: "/topics" },
+  { icon: RotateCcw, label: "Revisions", path: "/revisions" },
   { label: "Retrieval", icon: Brain },
   { label: "Projects", icon: FolderGit2 },
   { label: "Analytics", icon: BarChart3 },
@@ -38,6 +52,9 @@ function formatToday() {
 export function AppShell() {
   const { signOut, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const currentItem =
+    navItems.find((item) => item.path === location.pathname) ?? navItems[0];
 
   return (
     <div className="min-h-screen bg-ink-50 text-ink-950 dark:bg-ink-950 dark:text-white">
@@ -55,28 +72,44 @@ export function AppShell() {
             </div>
           </div>
           <nav className="mt-8 space-y-1">
-            {navItems.map((item) => (
-              <button
-                className={
-                  item.label === "Today"
-                    ? "flex w-full items-center gap-3 rounded-lg bg-ink-950 px-3 py-2 text-left text-sm font-medium text-white shadow-soft dark:bg-white dark:text-ink-950"
-                    : "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-600 transition hover:bg-ink-100 dark:text-white/60 dark:hover:bg-white/10"
-                }
-                key={item.label}
-                type="button"
-              >
-                <item.icon aria-hidden="true" className="h-4 w-4" />
-                {item.label}
-              </button>
-            ))}
+            {navItems.map((item) =>
+              item.path ? (
+                <NavLink
+                  className={({ isActive }) =>
+                    clsx(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                      isActive
+                        ? "bg-ink-950 text-white shadow-soft dark:bg-white dark:text-ink-950"
+                        : "text-ink-600 hover:bg-ink-100 dark:text-white/60 dark:hover:bg-white/10",
+                    )
+                  }
+                  end={item.path === "/"}
+                  key={item.label}
+                  to={item.path}
+                >
+                  <item.icon aria-hidden="true" className="h-4 w-4" />
+                  {item.shortLabel ?? item.label}
+                </NavLink>
+              ) : (
+                <button
+                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-400 dark:text-white/30"
+                  disabled
+                  key={item.label}
+                  type="button"
+                >
+                  <item.icon aria-hidden="true" className="h-4 w-4" />
+                  {item.label}
+                </button>
+              ),
+            )}
           </nav>
           <div className="mt-8 rounded-lg border border-ink-200 bg-ink-50 p-4 dark:border-white/10 dark:bg-white/[0.04]">
             <p className="text-xs font-medium text-ink-500 dark:text-white/50">
-              Phase 3
+              Phase 4
             </p>
-            <p className="mt-1 text-sm font-semibold">Dashboard UI</p>
+            <p className="mt-1 text-sm font-semibold">Topic + Revision Engine</p>
             <div className="mt-4 h-2 rounded-full bg-ink-200 dark:bg-white/10">
-              <div className="h-2 w-3/5 rounded-full bg-mint-500" />
+              <div className="h-2 w-2/5 rounded-full bg-mint-500" />
             </div>
           </div>
         </aside>
@@ -89,7 +122,7 @@ export function AppShell() {
                   {formatToday()}
                 </p>
                 <h1 className="truncate text-base font-semibold sm:text-lg">
-                  Today Dashboard
+                  {currentItem.label}
                 </h1>
               </div>
               <div className="flex items-center gap-3">
@@ -127,20 +160,38 @@ export function AppShell() {
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ink-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-white/10 dark:bg-ink-950/95 lg:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
-          {mobileNavItems.map((item) => (
-            <button
-              className={
-                item.label === "Today"
-                  ? "flex min-h-12 flex-col items-center justify-center rounded-lg bg-ink-950 px-1 text-xs font-medium text-white dark:bg-white dark:text-ink-950"
-                  : "flex min-h-12 flex-col items-center justify-center rounded-lg px-1 text-xs font-medium text-ink-500 transition hover:bg-ink-100 dark:text-white/55 dark:hover:bg-white/10"
-              }
-              key={item.label}
-              type="button"
-            >
-              <item.icon aria-hidden="true" className="mb-1 h-4 w-4" />
-              <span className="max-w-full truncate">{item.label}</span>
-            </button>
-          ))}
+          {mobileNavItems.map((item) =>
+            item.path ? (
+              <NavLink
+                className={({ isActive }) =>
+                  clsx(
+                    "flex min-h-12 flex-col items-center justify-center rounded-lg px-1 text-xs font-medium transition",
+                    isActive
+                      ? "bg-ink-950 text-white dark:bg-white dark:text-ink-950"
+                      : "text-ink-500 hover:bg-ink-100 dark:text-white/55 dark:hover:bg-white/10",
+                  )
+                }
+                end={item.path === "/"}
+                key={item.label}
+                to={item.path}
+              >
+                <item.icon aria-hidden="true" className="mb-1 h-4 w-4" />
+                <span className="max-w-full truncate">
+                  {item.shortLabel ?? item.label}
+                </span>
+              </NavLink>
+            ) : (
+              <button
+                className="flex min-h-12 cursor-not-allowed flex-col items-center justify-center rounded-lg px-1 text-xs font-medium text-ink-400 dark:text-white/30"
+                disabled
+                key={item.label}
+                type="button"
+              >
+                <item.icon aria-hidden="true" className="mb-1 h-4 w-4" />
+                <span className="max-w-full truncate">{item.label}</span>
+              </button>
+            ),
+          )}
         </div>
       </nav>
     </div>

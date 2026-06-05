@@ -7,6 +7,7 @@ export type Json =
   | Json[];
 
 export type BucketStatus = "R" | "S" | "G";
+export type BucketSuggestionStatus = "pending" | "accepted" | "rejected";
 export type ProjectStatus = "not_started" | "in_progress" | "completed";
 export type RetrievalStatus = "planned" | "in_progress" | "complete" | "missed";
 export type ReviewStatus = "scheduled" | "complete" | "partial" | "missed";
@@ -345,10 +346,50 @@ export type Database = {
         };
         Relationships: [];
       };
+      bucket_suggestions: {
+        Row: {
+          created_at: string;
+          decided_at: string | null;
+          from_bucket: BucketStatus;
+          id: string;
+          reason: string;
+          status: BucketSuggestionStatus;
+          to_bucket: BucketStatus;
+          topic_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          decided_at?: string | null;
+          from_bucket: BucketStatus;
+          id?: string;
+          reason: string;
+          status?: BucketSuggestionStatus;
+          to_bucket: BucketStatus;
+          topic_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          decided_at?: string | null;
+          from_bucket?: BucketStatus;
+          id?: string;
+          reason?: string;
+          status?: BucketSuggestionStatus;
+          to_bucket?: BucketStatus;
+          topic_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: {
+      bucket_suggestion_status: BucketSuggestionStatus;
       bucket_status: BucketStatus;
       project_status: ProjectStatus;
       retrieval_status: RetrievalStatus;
@@ -370,3 +411,5 @@ export type RetrievalSession =
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type MasterySnapshot =
   Database["public"]["Tables"]["mastery_snapshots"]["Row"];
+export type BucketSuggestion =
+  Database["public"]["Tables"]["bucket_suggestions"]["Row"];

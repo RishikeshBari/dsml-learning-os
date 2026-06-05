@@ -74,6 +74,8 @@ Ready-to-use steps:
 
 Goal: Enable the core mastery loop.
 
+Status: Implemented and verified. Topic creation, review completion, automatic review scheduling, and dashboard updates are working against Supabase.
+
 Build:
 
 - Module CRUD
