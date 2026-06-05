@@ -99,6 +99,8 @@ Ready-to-use steps:
 
 Goal: Create Sunday retrieval sessions and response tracking.
 
+Status: Implemented and verified. Retrieval session generation, R/S topic selection, system prompts, response scoring, completion, and dashboard updates are working against Supabase.
+
 Build:
 
 - Retrieval session creation

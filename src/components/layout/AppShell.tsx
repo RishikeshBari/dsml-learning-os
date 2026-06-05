@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   },
   { icon: BookOpenCheck, label: "Topics", path: "/topics" },
   { icon: RotateCcw, label: "Revisions", path: "/revisions" },
-  { label: "Retrieval", icon: Brain },
+  { icon: Brain, label: "Retrieval", path: "/retrieval" },
   { label: "Projects", icon: FolderGit2 },
   { label: "Analytics", icon: BarChart3 },
   { label: "Settings", icon: Settings },
@@ -105,11 +105,11 @@ export function AppShell() {
           </nav>
           <div className="mt-8 rounded-lg border border-ink-200 bg-ink-50 p-4 dark:border-white/10 dark:bg-white/[0.04]">
             <p className="text-xs font-medium text-ink-500 dark:text-white/50">
-              Phase 4
+              Phase 5
             </p>
-            <p className="mt-1 text-sm font-semibold">Topic + Revision Engine</p>
+            <p className="mt-1 text-sm font-semibold">Retrieval Engine</p>
             <div className="mt-4 h-2 rounded-full bg-ink-200 dark:bg-white/10">
-              <div className="h-2 w-2/5 rounded-full bg-mint-500" />
+              <div className="h-2 w-1/2 rounded-full bg-mint-500" />
             </div>
           </div>
         </aside>

@@ -9,6 +9,8 @@ export type Json =
 export type BucketStatus = "R" | "S" | "G";
 export type BucketSuggestionStatus = "pending" | "accepted" | "rejected";
 export type ProjectStatus = "not_started" | "in_progress" | "completed";
+export type PromptSource = "system" | "gemini";
+export type PromptType = "conceptual" | "interview" | "practical" | "coding";
 export type RetrievalStatus = "planned" | "in_progress" | "complete" | "missed";
 export type ReviewStatus = "scheduled" | "complete" | "partial" | "missed";
 export type ThemePreference = "light" | "dark" | "system";
@@ -265,6 +267,93 @@ export type Database = {
         };
         Relationships: [];
       };
+      retrieval_session_topics: {
+        Row: {
+          created_at: string;
+          retrieval_session_id: string;
+          selection_reason: string | null;
+          topic_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          retrieval_session_id: string;
+          selection_reason?: string | null;
+          topic_id: string;
+        };
+        Update: {
+          created_at?: string;
+          retrieval_session_id?: string;
+          selection_reason?: string | null;
+          topic_id?: string;
+        };
+        Relationships: [];
+      };
+      retrieval_prompts: {
+        Row: {
+          created_at: string;
+          id: string;
+          prompt: string;
+          prompt_type: PromptType;
+          retrieval_session_id: string | null;
+          source: PromptSource;
+          topic_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          prompt: string;
+          prompt_type: PromptType;
+          retrieval_session_id?: string | null;
+          source?: PromptSource;
+          topic_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          prompt?: string;
+          prompt_type?: PromptType;
+          retrieval_session_id?: string | null;
+          source?: PromptSource;
+          topic_id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      retrieval_responses: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          id: string;
+          response: string | null;
+          retrieval_prompt_id: string;
+          score: number | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          response?: string | null;
+          retrieval_prompt_id: string;
+          score?: number | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          id?: string;
+          response?: string | null;
+          retrieval_prompt_id?: string;
+          score?: number | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       projects: {
         Row: {
           completed_at: string | null;
@@ -391,6 +480,8 @@ export type Database = {
     Enums: {
       bucket_suggestion_status: BucketSuggestionStatus;
       bucket_status: BucketStatus;
+      prompt_source: PromptSource;
+      prompt_type: PromptType;
       project_status: ProjectStatus;
       retrieval_status: RetrievalStatus;
       review_status: ReviewStatus;
@@ -408,6 +499,12 @@ export type Topic = Database["public"]["Tables"]["topics"]["Row"];
 export type Review = Database["public"]["Tables"]["reviews"]["Row"];
 export type RetrievalSession =
   Database["public"]["Tables"]["retrieval_sessions"]["Row"];
+export type RetrievalSessionTopic =
+  Database["public"]["Tables"]["retrieval_session_topics"]["Row"];
+export type RetrievalPrompt =
+  Database["public"]["Tables"]["retrieval_prompts"]["Row"];
+export type RetrievalResponse =
+  Database["public"]["Tables"]["retrieval_responses"]["Row"];
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type MasterySnapshot =
   Database["public"]["Tables"]["mastery_snapshots"]["Row"];
