@@ -7,6 +7,8 @@ export type Json =
   | Json[];
 
 export type BucketStatus = "R" | "S" | "G";
+export type ProjectStatus = "not_started" | "in_progress" | "completed";
+export type RetrievalStatus = "planned" | "in_progress" | "complete" | "missed";
 export type ReviewStatus = "scheduled" | "complete" | "partial" | "missed";
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -115,11 +117,241 @@ export type Database = {
         };
         Relationships: [];
       };
+      modules: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          is_archived: boolean;
+          name: string;
+          sort_order: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_archived?: boolean;
+          name: string;
+          sort_order?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          is_archived?: boolean;
+          name?: string;
+          sort_order?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      topics: {
+        Row: {
+          bucket: BucketStatus;
+          created_at: string;
+          date_studied: string;
+          id: string;
+          instructor_notes: string | null;
+          is_archived: boolean;
+          last_reviewed_at: string | null;
+          module_id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          bucket?: BucketStatus;
+          created_at?: string;
+          date_studied: string;
+          id?: string;
+          instructor_notes?: string | null;
+          is_archived?: boolean;
+          last_reviewed_at?: string | null;
+          module_id: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          bucket?: BucketStatus;
+          created_at?: string;
+          date_studied?: string;
+          id?: string;
+          instructor_notes?: string | null;
+          is_archived?: boolean;
+          last_reviewed_at?: string | null;
+          module_id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      reviews: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          due_date: string;
+          id: string;
+          mastery_score: number | null;
+          review_number: number;
+          status: ReviewStatus;
+          topic_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          due_date: string;
+          id?: string;
+          mastery_score?: number | null;
+          review_number: number;
+          status?: ReviewStatus;
+          topic_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          due_date?: string;
+          id?: string;
+          mastery_score?: number | null;
+          review_number?: number;
+          status?: ReviewStatus;
+          topic_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      retrieval_sessions: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          duration_minutes: number;
+          id: string;
+          scheduled_for: string;
+          status: RetrievalStatus;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          duration_minutes?: number;
+          id?: string;
+          scheduled_for: string;
+          status?: RetrievalStatus;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          duration_minutes?: number;
+          id?: string;
+          scheduled_for?: string;
+          status?: RetrievalStatus;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      projects: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          description: string | null;
+          github_link: string | null;
+          id: string;
+          module_id: string | null;
+          name: string;
+          started_at: string | null;
+          status: ProjectStatus;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string | null;
+          github_link?: string | null;
+          id?: string;
+          module_id?: string | null;
+          name: string;
+          started_at?: string | null;
+          status?: ProjectStatus;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string | null;
+          github_link?: string | null;
+          id?: string;
+          module_id?: string | null;
+          name?: string;
+          started_at?: string | null;
+          status?: ProjectStatus;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      mastery_snapshots: {
+        Row: {
+          coding_score: number;
+          created_at: string;
+          id: string;
+          mastery_score: number;
+          module_id: string | null;
+          retrieval_score: number;
+          revision_score: number;
+          snapshot_date: string;
+          topic_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          coding_score?: number;
+          created_at?: string;
+          id?: string;
+          mastery_score?: number;
+          module_id?: string | null;
+          retrieval_score?: number;
+          revision_score?: number;
+          snapshot_date?: string;
+          topic_id?: string | null;
+          user_id: string;
+        };
+        Update: {
+          coding_score?: number;
+          created_at?: string;
+          id?: string;
+          mastery_score?: number;
+          module_id?: string | null;
+          retrieval_score?: number;
+          revision_score?: number;
+          snapshot_date?: string;
+          topic_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: {
       bucket_status: BucketStatus;
+      project_status: ProjectStatus;
+      retrieval_status: RetrievalStatus;
       review_status: ReviewStatus;
     };
     CompositeTypes: Record<string, never>;
@@ -130,4 +362,11 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type UserSettings = Database["public"]["Tables"]["user_settings"]["Row"];
 export type ClassSchedule =
   Database["public"]["Tables"]["class_schedule"]["Row"];
-
+export type Module = Database["public"]["Tables"]["modules"]["Row"];
+export type Topic = Database["public"]["Tables"]["topics"]["Row"];
+export type Review = Database["public"]["Tables"]["reviews"]["Row"];
+export type RetrievalSession =
+  Database["public"]["Tables"]["retrieval_sessions"]["Row"];
+export type Project = Database["public"]["Tables"]["projects"]["Row"];
+export type MasterySnapshot =
+  Database["public"]["Tables"]["mastery_snapshots"]["Row"];

@@ -22,7 +22,7 @@ Exit criteria:
 
 Goal: Create the Vite app and connect it to Supabase Auth.
 
-Status: Implemented app foundation and created the dedicated Supabase project. Final sign-in verification requires Google OAuth credentials configured in Supabase.
+Status: Implemented and verified. Google OAuth is configured in Google Cloud and Supabase, local sign-in succeeds, and database bootstrap rows are created.
 
 Build:
 
@@ -48,6 +48,8 @@ Ready-to-use steps:
 ## Phase 3: Dashboard UI
 
 Goal: Build the premium Today Dashboard shell and responsive navigation.
+
+Status: Implemented dashboard shell and live Supabase read model. Topic and revision mutations begin in Phase 4.
 
 Build:
 

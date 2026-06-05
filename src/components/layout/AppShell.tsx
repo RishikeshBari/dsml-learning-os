@@ -1,24 +1,50 @@
-import { BookOpenCheck, CalendarClock, Settings, Sparkles } from "lucide-react";
+import {
+  BarChart3,
+  BookOpenCheck,
+  Brain,
+  CalendarClock,
+  FolderGit2,
+  LogOut,
+  Moon,
+  RotateCcw,
+  Settings,
+  Sun,
+} from "lucide-react";
 import { Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/features/auth/useAuth";
+import { useTheme } from "@/features/theme/useTheme";
 
 const navItems = [
   { label: "Today", icon: CalendarClock },
   { label: "Topics", icon: BookOpenCheck },
-  { label: "Insights", icon: Sparkles },
+  { label: "Revisions", icon: RotateCcw },
+  { label: "Retrieval", icon: Brain },
+  { label: "Projects", icon: FolderGit2 },
+  { label: "Analytics", icon: BarChart3 },
   { label: "Settings", icon: Settings },
 ];
 
+const mobileNavItems = navItems.slice(0, 5);
+
+function formatToday() {
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    weekday: "long",
+  }).format(new Date());
+}
+
 export function AppShell() {
   const { signOut, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen bg-ink-50 text-ink-950 dark:bg-ink-950 dark:text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl">
-        <aside className="hidden w-64 border-r border-ink-200/70 bg-white/70 px-5 py-6 backdrop-blur dark:border-white/10 dark:bg-white/[0.03] lg:block">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
+        <aside className="hidden w-72 border-r border-ink-200/70 bg-white/80 px-5 py-6 backdrop-blur dark:border-white/10 dark:bg-white/[0.03] lg:block">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-950 text-white dark:bg-white dark:text-ink-950">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-950 text-sm font-semibold text-white dark:bg-white dark:text-ink-950">
               OS
             </div>
             <div>
@@ -31,7 +57,11 @@ export function AppShell() {
           <nav className="mt-8 space-y-1">
             {navItems.map((item) => (
               <button
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-700 transition hover:bg-ink-100 dark:text-white/70 dark:hover:bg-white/10"
+                className={
+                  item.label === "Today"
+                    ? "flex w-full items-center gap-3 rounded-lg bg-ink-950 px-3 py-2 text-left text-sm font-medium text-white shadow-soft dark:bg-white dark:text-ink-950"
+                    : "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-600 transition hover:bg-ink-100 dark:text-white/60 dark:hover:bg-white/10"
+                }
                 key={item.label}
                 type="button"
               >
@@ -40,35 +70,79 @@ export function AppShell() {
               </button>
             ))}
           </nav>
+          <div className="mt-8 rounded-lg border border-ink-200 bg-ink-50 p-4 dark:border-white/10 dark:bg-white/[0.04]">
+            <p className="text-xs font-medium text-ink-500 dark:text-white/50">
+              Phase 3
+            </p>
+            <p className="mt-1 text-sm font-semibold">Dashboard UI</p>
+            <div className="mt-4 h-2 rounded-full bg-ink-200 dark:bg-white/10">
+              <div className="h-2 w-3/5 rounded-full bg-mint-500" />
+            </div>
+          </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-10 border-b border-ink-200/70 bg-white/80 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-ink-950/80 sm:px-6">
+          <header className="sticky top-0 z-10 border-b border-ink-200/70 bg-white/85 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-ink-950/85 sm:px-6">
             <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-ink-500 dark:text-white/45">
-                  Phase 2
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase text-ink-500 dark:text-white/45">
+                  {formatToday()}
                 </p>
-                <h1 className="text-base font-semibold sm:text-lg">
-                  Authentication + Supabase setup
+                <h1 className="truncate text-base font-semibold sm:text-lg">
+                  Today Dashboard
                 </h1>
               </div>
               <div className="flex items-center gap-3">
                 <span className="hidden max-w-48 truncate text-sm text-ink-500 dark:text-white/55 sm:inline">
                   {user?.email}
                 </span>
-                <Button onClick={signOut} variant="secondary">
+                <button
+                  aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink-200 bg-white text-ink-700 transition hover:bg-ink-100 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                  onClick={toggleTheme}
+                  type="button"
+                >
+                  {theme === "dark" ? (
+                    <Sun aria-hidden="true" className="h-4 w-4" />
+                  ) : (
+                    <Moon aria-hidden="true" className="h-4 w-4" />
+                  )}
+                </button>
+                <Button
+                  aria-label="Sign out"
+                  className="hidden gap-2 sm:inline-flex"
+                  onClick={signOut}
+                  variant="secondary"
+                >
+                  <LogOut aria-hidden="true" className="h-4 w-4" />
                   Sign out
                 </Button>
               </div>
             </div>
           </header>
-          <main className="flex-1 px-4 py-6 sm:px-6">
+          <main className="flex-1 px-4 py-6 pb-24 sm:px-6 lg:pb-8">
             <Outlet />
           </main>
         </div>
       </div>
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ink-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-white/10 dark:bg-ink-950/95 lg:hidden">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+          {mobileNavItems.map((item) => (
+            <button
+              className={
+                item.label === "Today"
+                  ? "flex min-h-12 flex-col items-center justify-center rounded-lg bg-ink-950 px-1 text-xs font-medium text-white dark:bg-white dark:text-ink-950"
+                  : "flex min-h-12 flex-col items-center justify-center rounded-lg px-1 text-xs font-medium text-ink-500 transition hover:bg-ink-100 dark:text-white/55 dark:hover:bg-white/10"
+              }
+              key={item.label}
+              type="button"
+            >
+              <item.icon aria-hidden="true" className="mb-1 h-4 w-4" />
+              <span className="max-w-full truncate">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
-
