@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { TodayPage } from "@/features/dashboard/TodayPage";
 import { RevisionsPage } from "@/features/revisions/RevisionsPage";
 import { RetrievalPage } from "@/features/retrieval/RetrievalPage";
+import { SettingsPage } from "@/features/settings/SettingsPage";
 import { TopicsPage } from "@/features/topics/TopicsPage";
 
 export function App() {
@@ -23,6 +24,7 @@ export function App() {
         <Route path="topics" element={<TopicsPage />} />
         <Route path="revisions" element={<RevisionsPage />} />
         <Route path="retrieval" element={<RetrievalPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

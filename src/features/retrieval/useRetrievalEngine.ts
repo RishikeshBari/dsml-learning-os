@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/useAuth";
+import { generateGeminiText } from "@/features/gemini/geminiClient";
 import { supabase } from "@/lib/supabase/client";
 import type {
   BucketStatus,
@@ -49,6 +50,16 @@ type SaveResponseInput = {
   response: string;
   responseId?: string;
   score: number;
+};
+
+type GenerateGeminiPromptsInput = {
+  apiKey: string;
+  sessionId: string;
+};
+
+type GeminiPromptItem = {
+  prompt: string;
+  prompt_type: PromptType;
 };
 
 const promptTypes: PromptType[] = [
@@ -125,6 +136,76 @@ function getSessionScore(prompts: PromptWithResponse[]) {
   return Math.round(
     (scores.reduce((total, score) => total + score, 0) / scores.length) * 10,
   ) / 10;
+}
+
+function isPromptType(value: unknown): value is PromptType {
+  return (
+    typeof value === "string" && promptTypes.includes(value as PromptType)
+  );
+}
+
+function parseGeminiPromptItems(text: string): GeminiPromptItem[] {
+  const trimmedText = text.trim();
+  const jsonStart = trimmedText.indexOf("[");
+  const jsonEnd = trimmedText.lastIndexOf("]");
+  const jsonText =
+    jsonStart >= 0 && jsonEnd > jsonStart
+      ? trimmedText.slice(jsonStart, jsonEnd + 1)
+      : trimmedText;
+
+  try {
+    const parsed = JSON.parse(jsonText) as unknown;
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((item) => {
+        if (
+          !item ||
+          typeof item !== "object" ||
+          !("prompt" in item) ||
+          !("prompt_type" in item)
+        ) {
+          return null;
+        }
+
+        const prompt = item.prompt;
+        const promptType = item.prompt_type;
+
+        if (typeof prompt !== "string" || !isPromptType(promptType)) {
+          return null;
+        }
+
+        return {
+          prompt: prompt.trim(),
+          prompt_type: promptType,
+        };
+      })
+      .filter((item): item is GeminiPromptItem =>
+        Boolean(item?.prompt.trim()),
+      );
+  } catch {
+    return [];
+  }
+}
+
+function buildGeminiPromptRequest(topic: RetrievalTopic) {
+  return `Create exactly four DS/ML retrieval practice prompts for this topic.
+
+Topic: ${topic.name}
+Module: ${topic.moduleName}
+Current bucket: ${topic.bucket}
+Instructor notes: ${topic.instructor_notes ?? "None"}
+
+Return only JSON. Use this exact shape:
+[
+  {"prompt_type":"conceptual","prompt":"..."},
+  {"prompt_type":"interview","prompt":"..."},
+  {"prompt_type":"practical","prompt":"..."},
+  {"prompt_type":"coding","prompt":"..."}
+]`;
 }
 
 export function useRetrievalEngine() {
@@ -430,6 +511,78 @@ export function useRetrievalEngine() {
     onSuccess: invalidateRetrievalData,
   });
 
+  const generateGeminiPrompts = useMutation({
+    mutationFn: async (values: GenerateGeminiPromptsInput) => {
+      if (!user) {
+        throw new Error("You need to be signed in to generate Gemini prompts.");
+      }
+
+      const apiKey = values.apiKey.trim();
+
+      if (!apiKey) {
+        throw new Error("Save a Gemini API key in Settings first.");
+      }
+
+      const session = retrievalQuery.data?.sessions.find(
+        (item) => item.id === values.sessionId,
+      );
+
+      if (!session) {
+        throw new Error("Select a retrieval session first.");
+      }
+
+      const existingGeminiPrompts = new Set(
+        session.prompts
+          .filter((prompt) => prompt.source === "gemini")
+          .map((prompt) => `${prompt.topic_id}:${prompt.prompt_type}`),
+      );
+      const promptRows = [];
+
+      for (const topic of session.topics) {
+        const result = await generateGeminiText({
+          apiKey,
+          prompt: buildGeminiPromptRequest(topic),
+          systemInstruction:
+            "You create concise, high-signal DS/ML retrieval prompts. Return strict JSON only.",
+        });
+        const items = parseGeminiPromptItems(result);
+
+        for (const item of items) {
+          const dedupeKey = `${topic.id}:${item.prompt_type}`;
+
+          if (existingGeminiPrompts.has(dedupeKey)) {
+            continue;
+          }
+
+          existingGeminiPrompts.add(dedupeKey);
+          promptRows.push({
+            prompt: item.prompt,
+            prompt_type: item.prompt_type,
+            retrieval_session_id: session.id,
+            source: "gemini" as const,
+            topic_id: topic.id,
+            user_id: user.id,
+          });
+        }
+      }
+
+      if (promptRows.length === 0) {
+        throw new Error("Gemini did not return any new prompts.");
+      }
+
+      const { error } = await supabase
+        .from("retrieval_prompts")
+        .insert(promptRows);
+
+      if (error) {
+        throw error;
+      }
+
+      return promptRows.length;
+    },
+    onSuccess: invalidateRetrievalData,
+  });
+
   return {
     createSession,
     data: retrievalQuery.data,
@@ -438,9 +591,14 @@ export function useRetrievalEngine() {
     isMutating:
       createSession.isPending ||
       updateSessionStatus.isPending ||
-      saveResponse.isPending,
+      saveResponse.isPending ||
+      generateGeminiPrompts.isPending,
     mutationError:
-      createSession.error ?? updateSessionStatus.error ?? saveResponse.error,
+      createSession.error ??
+      updateSessionStatus.error ??
+      saveResponse.error ??
+      generateGeminiPrompts.error,
+    generateGeminiPrompts,
     saveResponse,
     updateSessionStatus,
   };

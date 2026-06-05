@@ -122,6 +122,8 @@ Ready-to-use steps:
 
 Goal: Generate useful questions and explanations on demand.
 
+Status: Implemented free-first Gemini key management and retrieval prompt generation. Local settings and no-key behavior are verified; full success testing requires a real Gemini API key from Google AI Studio.
+
 Build:
 
 - Gemini API key setting

@@ -5,11 +5,13 @@ import {
   ClipboardCheck,
   Play,
   Save,
+  Sparkles,
   Target,
 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { getStoredGeminiApiKey } from "@/features/gemini/geminiStorage";
 import type { PromptWithResponse } from "@/features/retrieval/useRetrievalEngine";
 import { useRetrievalEngine } from "@/features/retrieval/useRetrievalEngine";
 import type { PromptType, RetrievalStatus } from "@/types/database";
@@ -62,6 +64,7 @@ export function RetrievalPage() {
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [geminiNotice, setGeminiNotice] = useState("");
 
   useEffect(() => {
     if (!scheduledFor && data?.nextSunday) {
@@ -109,6 +112,26 @@ export function RetrievalPage() {
     });
   }
 
+  async function handleGenerateGeminiPrompts() {
+    if (!activeSession) {
+      return;
+    }
+
+    const apiKey = getStoredGeminiApiKey();
+
+    if (!apiKey) {
+      setGeminiNotice("Save a Gemini API key in Settings first.");
+      return;
+    }
+
+    setGeminiNotice("");
+    const count = await retrieval.generateGeminiPrompts.mutateAsync({
+      apiKey,
+      sessionId: activeSession.id,
+    });
+    setGeminiNotice(`${count} Gemini prompts added.`);
+  }
+
   if (retrieval.isLoading) {
     return (
       <div className="mx-auto max-w-7xl space-y-5">
@@ -136,6 +159,12 @@ export function RetrievalPage() {
       {retrieval.mutationError ? (
         <div className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-4 text-sm text-ink-700 dark:text-white/75">
           {retrieval.mutationError.message}
+        </div>
+      ) : null}
+
+      {geminiNotice ? (
+        <div className="rounded-lg border border-mint-500/25 bg-mint-500/10 p-4 text-sm text-ink-700 dark:text-white/75">
+          {geminiNotice}
         </div>
       ) : null}
 
@@ -299,6 +328,15 @@ export function RetrievalPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Button
+                  className="gap-2"
+                  disabled={retrieval.isMutating || activeSession.topics.length === 0}
+                  onClick={handleGenerateGeminiPrompts}
+                  variant="secondary"
+                >
+                  <Sparkles aria-hidden="true" className="h-4 w-4" />
+                  Gemini prompts
+                </Button>
                 {activeSession.status === "planned" ? (
                   <Button
                     className="gap-2"
@@ -374,6 +412,11 @@ export function RetrievalPage() {
                           <span className="rounded-lg bg-mint-500/10 px-2 py-1 text-xs font-semibold text-mint-600 dark:text-mint-400">
                             {promptLabels[prompt.prompt_type]}
                           </span>
+                          {prompt.source === "gemini" ? (
+                            <span className="rounded-lg bg-signal-amber/10 px-2 py-1 text-xs font-semibold text-signal-amber">
+                              Gemini
+                            </span>
+                          ) : null}
                           <span className="text-xs text-ink-500 dark:text-white/50">
                             {prompt.topicName} - {prompt.moduleName}
                           </span>
