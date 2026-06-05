@@ -217,22 +217,22 @@ export function TodayPage() {
           </p>
         </div>
 
-        <div className="rounded-lg border border-ink-200 bg-ink-950 p-5 text-white shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
+        <div className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-white/70">
+            <p className="text-sm font-medium text-ink-500 dark:text-white/60">
               Learning health
             </p>
             <Activity
               aria-hidden="true"
-              className="h-5 w-5 text-mint-400"
+              className="h-5 w-5 text-mint-500 dark:text-mint-400"
             />
           </div>
-          <p className="mt-5 text-5xl font-semibold text-white">
+          <p className="mt-5 text-5xl font-semibold text-ink-950 dark:text-white">
             {healthScore}
           </p>
-          <div className="mt-5 h-2 rounded-full bg-white/15">
+          <div className="mt-5 h-2 rounded-full bg-ink-100 dark:bg-white/15">
             <div
-              className="h-2 rounded-full bg-mint-400"
+              className="h-2 rounded-full bg-mint-500 dark:bg-mint-400"
               style={{ width: `${healthScore}%` }}
             />
           </div>

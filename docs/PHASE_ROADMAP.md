@@ -168,6 +168,8 @@ Ready-to-use steps:
 
 Goal: Connect projects to employability and mastery.
 
+Status: Core project tracker implemented as a usability improvement. Topic association and mastery contribution remain future enhancements.
+
 Build:
 
 - Project CRUD
@@ -187,6 +189,8 @@ Ready-to-use steps:
 ## Phase 9: Analytics
 
 Goal: Make progress visible and actionable.
+
+Status: Core analytics page implemented as a usability improvement. Trend charts and deeper monthly analytics remain future enhancements.
 
 Build:
 

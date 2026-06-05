@@ -194,6 +194,7 @@ export function useLearningEngine() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ["analytics", user?.id] }),
     ]);
   };
 
@@ -263,6 +264,34 @@ export function useLearningEngine() {
       const { error } = await supabase
         .from("topics")
         .update({ is_archived: true })
+        .eq("id", topicId);
+
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: invalidateLearningData,
+  });
+
+  const deleteModule = useMutation({
+    mutationFn: async (moduleId: string) => {
+      const { error } = await supabase
+        .from("modules")
+        .delete()
+        .eq("id", moduleId);
+
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: invalidateLearningData,
+  });
+
+  const deleteTopic = useMutation({
+    mutationFn: async (topicId: string) => {
+      const { error } = await supabase
+        .from("topics")
+        .delete()
         .eq("id", topicId);
 
       if (error) {
@@ -404,6 +433,8 @@ export function useLearningEngine() {
     createModule,
     createTopic,
     data: learningQuery.data,
+    deleteModule,
+    deleteTopic,
     error: learningQuery.error,
     isLoading: learningQuery.isLoading,
     isMutating:
@@ -411,6 +442,8 @@ export function useLearningEngine() {
       createTopic.isPending ||
       updateTopicBucket.isPending ||
       archiveTopic.isPending ||
+      deleteModule.isPending ||
+      deleteTopic.isPending ||
       completeReview.isPending ||
       acceptSuggestion.isPending ||
       rejectSuggestion.isPending,
@@ -419,6 +452,8 @@ export function useLearningEngine() {
       createTopic.error ??
       updateTopicBucket.error ??
       archiveTopic.error ??
+      deleteModule.error ??
+      deleteTopic.error ??
       completeReview.error ??
       acceptSuggestion.error ??
       rejectSuggestion.error,

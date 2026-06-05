@@ -34,8 +34,8 @@ const navItems: NavItem[] = [
   { icon: BookOpenCheck, label: "Topics", path: "/topics" },
   { icon: RotateCcw, label: "Revisions", path: "/revisions" },
   { icon: Brain, label: "Retrieval", path: "/retrieval" },
-  { label: "Projects", icon: FolderGit2 },
-  { label: "Analytics", icon: BarChart3 },
+  { icon: FolderGit2, label: "Projects", path: "/projects" },
+  { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 

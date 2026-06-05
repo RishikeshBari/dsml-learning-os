@@ -1,4 +1,4 @@
-import { Archive, BookOpenCheck, Layers3, Plus } from "lucide-react";
+import { Archive, BookOpenCheck, Layers3, Plus, Trash2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -68,6 +68,26 @@ export function TopicsPage() {
     setDateStudied(todayInputValue());
     setBucket("R");
     setNotes("");
+  }
+
+  function handleDeleteModule(moduleId: string, moduleName: string) {
+    if (
+      window.confirm(
+        `Delete "${moduleName}" and all of its topics, reviews, prompts, and project links?`,
+      )
+    ) {
+      learning.deleteModule.mutate(moduleId);
+    }
+  }
+
+  function handleDeleteTopic(topicId: string, topicName: string) {
+    if (
+      window.confirm(
+        `Delete "${topicName}" and its reviews/retrieval links permanently?`,
+      )
+    ) {
+      learning.deleteTopic.mutate(topicId);
+    }
   }
 
   if (learning.isLoading) {
@@ -214,6 +234,50 @@ export function TopicsPage() {
 
       <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
         <div className="flex items-center justify-between gap-4">
+          <h2 className="text-sm font-semibold">Module Library</h2>
+          <p className="text-sm text-ink-500 dark:text-white/55">
+            {modules.length} modules
+          </p>
+        </div>
+
+        {modules.length > 0 ? (
+          <div className="mt-5 divide-y divide-ink-100 dark:divide-white/10">
+            {modules.map((moduleItem) => (
+              <div
+                className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_140px]"
+                key={moduleItem.id}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {moduleItem.name}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-500 dark:text-white/50">
+                    {moduleItem.description || "No description"}
+                  </p>
+                </div>
+                <Button
+                  className="gap-2"
+                  disabled={learning.isMutating}
+                  onClick={() =>
+                    handleDeleteModule(moduleItem.id, moduleItem.name)
+                  }
+                  variant="secondary"
+                >
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-8 text-sm text-ink-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55">
+            No modules yet.
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
+        <div className="flex items-center justify-between gap-4">
           <h2 className="text-sm font-semibold">Topic Library</h2>
           <p className="text-sm text-ink-500 dark:text-white/55">
             {topics.length} topics
@@ -224,7 +288,7 @@ export function TopicsPage() {
           <div className="mt-5 divide-y divide-ink-100 dark:divide-white/10">
             {topics.map((topic) => (
               <div
-                className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_180px_140px]"
+                className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_180px_140px_140px]"
                 key={topic.id}
               >
                 <div className="min-w-0">
@@ -251,11 +315,21 @@ export function TopicsPage() {
                 </select>
                 <Button
                   className="gap-2"
+                  disabled={learning.isMutating}
                   onClick={() => learning.archiveTopic.mutate(topic.id)}
                   variant="secondary"
                 >
                   <Archive aria-hidden="true" className="h-4 w-4" />
                   Archive
+                </Button>
+                <Button
+                  className="gap-2"
+                  disabled={learning.isMutating}
+                  onClick={() => handleDeleteTopic(topic.id, topic.name)}
+                  variant="secondary"
+                >
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
+                  Delete
                 </Button>
               </div>
             ))}

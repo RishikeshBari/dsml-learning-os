@@ -382,6 +382,7 @@ export function useRetrievalEngine() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ["analytics", user?.id] }),
     ]);
   };
 
@@ -464,6 +465,20 @@ export function useRetrievalEngine() {
           completed_at: status === "complete" ? new Date().toISOString() : null,
           status,
         })
+        .eq("id", sessionId);
+
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: invalidateRetrievalData,
+  });
+
+  const deleteSession = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const { error } = await supabase
+        .from("retrieval_sessions")
+        .delete()
         .eq("id", sessionId);
 
       if (error) {
@@ -586,16 +601,19 @@ export function useRetrievalEngine() {
   return {
     createSession,
     data: retrievalQuery.data,
+    deleteSession,
     error: retrievalQuery.error,
     isLoading: retrievalQuery.isLoading,
     isMutating:
       createSession.isPending ||
       updateSessionStatus.isPending ||
+      deleteSession.isPending ||
       saveResponse.isPending ||
       generateGeminiPrompts.isPending,
     mutationError:
       createSession.error ??
       updateSessionStatus.error ??
+      deleteSession.error ??
       saveResponse.error ??
       generateGeminiPrompts.error,
     generateGeminiPrompts,

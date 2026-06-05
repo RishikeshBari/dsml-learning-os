@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthPage } from "@/features/auth/AuthPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
+import { AnalyticsPage } from "@/features/analytics/AnalyticsPage";
 import { TodayPage } from "@/features/dashboard/TodayPage";
+import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { RevisionsPage } from "@/features/revisions/RevisionsPage";
 import { RetrievalPage } from "@/features/retrieval/RetrievalPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
@@ -24,6 +26,8 @@ export function App() {
         <Route path="topics" element={<TopicsPage />} />
         <Route path="revisions" element={<RevisionsPage />} />
         <Route path="retrieval" element={<RetrievalPage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

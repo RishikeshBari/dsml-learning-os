@@ -7,6 +7,7 @@ import {
   Save,
   Sparkles,
   Target,
+  Trash2,
 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -130,6 +131,16 @@ export function RetrievalPage() {
       sessionId: activeSession.id,
     });
     setGeminiNotice(`${count} Gemini prompts added.`);
+  }
+
+  function handleDeleteSession(sessionId: string, dateLabel: string) {
+    if (
+      window.confirm(
+        `Delete retrieval session for ${dateLabel} and its prompts/responses?`,
+      )
+    ) {
+      retrieval.deleteSession.mutate(sessionId);
+    }
   }
 
   if (retrieval.isLoading) {
@@ -271,15 +282,17 @@ export function RetrievalPage() {
           {sessions.length > 0 ? (
             <div className="mt-5 divide-y divide-ink-100 dark:divide-white/10">
               {sessions.map((session) => (
-                <button
-                  className={`grid w-full gap-3 py-4 text-left md:grid-cols-[minmax(0,1fr)_auto] ${
-                    activeSession?.id === session.id ? "text-ink-950" : ""
-                  }`}
+                <div
+                  className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto]"
                   key={session.id}
-                  onClick={() => setSelectedSessionId(session.id)}
-                  type="button"
                 >
-                  <div className="min-w-0">
+                  <button
+                    className={`min-w-0 text-left ${
+                      activeSession?.id === session.id ? "text-ink-950" : ""
+                    }`}
+                    onClick={() => setSelectedSessionId(session.id)}
+                    type="button"
+                  >
                     <p className="truncate text-sm font-semibold">
                       {formatDateLabel(session.scheduled_for)}
                     </p>
@@ -287,15 +300,32 @@ export function RetrievalPage() {
                       {session.completedResponseCount}/{session.promptCount}{" "}
                       prompts - {session.topicCount} topics
                     </p>
-                  </div>
+                  </button>
                   <span
-                    className={`rounded-lg px-2 py-1 text-xs font-semibold ${getSessionTone(
+                    className={`self-start rounded-lg px-2 py-1 text-xs font-semibold ${getSessionTone(
                       session.status,
                     )}`}
                   >
                     {statusLabels[session.status]}
                   </span>
-                </button>
+                  <Button
+                    aria-label={`Delete retrieval session for ${formatDateLabel(
+                      session.scheduled_for,
+                    )}`}
+                    className="gap-2"
+                    disabled={retrieval.isMutating}
+                    onClick={() =>
+                      handleDeleteSession(
+                        session.id,
+                        formatDateLabel(session.scheduled_for),
+                      )
+                    }
+                    variant="secondary"
+                  >
+                    <Trash2 aria-hidden="true" className="h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
               ))}
             </div>
           ) : (
