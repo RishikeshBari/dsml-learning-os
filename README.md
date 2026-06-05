@@ -41,6 +41,14 @@ VITE_APP_BASE_PATH=/
 
 Run `supabase/migrations/0001_initial_schema.sql` in your Supabase project, then enable Google as an auth provider before testing real sign-in.
 
+Current Supabase project:
+
+```text
+Project: dsml-learning-os
+Project ref: crntzysmzpsqjmegldmp
+URL: https://crntzysmzpsqjmegldmp.supabase.co
+```
+
 ## Phase Roadmap
 
 1. Architecture + database design
@@ -62,4 +70,3 @@ Run `supabase/migrations/0001_initial_schema.sql` in your Supabase project, then
 - [Deployment Guide](./docs/DEPLOYMENT_GUIDE.md)
 - [Phase 2 Auth + Supabase Setup](./docs/phases/phase-02-auth-supabase.md)
 - [Initial Supabase Migration](./supabase/migrations/0001_initial_schema.sql)
-

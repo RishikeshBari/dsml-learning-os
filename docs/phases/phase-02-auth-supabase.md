@@ -15,10 +15,19 @@ Implemented in code:
 - Initial authenticated app shell
 - Profile loading hook for the `profiles` table
 
-Still requires your real Supabase project values:
+Completed in Supabase:
 
-- Supabase project URL
-- Supabase anon key
+- Created project `dsml-learning-os`
+- Project id/ref: `crntzysmzpsqjmegldmp`
+- Project URL: `https://crntzysmzpsqjmegldmp.supabase.co`
+- Applied migration `initial_schema`
+- Applied migration `harden_rls_and_indexes`
+- Security advisors currently report no findings
+- Performance advisors only report unused indexes, which is expected before real app traffic
+- Local `.env` is configured with the project URL and publishable key
+
+Still requires Google OAuth setup:
+
 - Google OAuth client ID and secret configured inside Supabase
 
 ## Branch Strategy
@@ -161,7 +170,16 @@ Redirect URLs: https://RishikeshBari.github.io/dsml-learning-os/**
 - App loads the user session after refresh.
 - `profiles`, `user_settings`, and default `class_schedule` rows are created by the database trigger.
 
+Verified on June 5, 2026:
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- `npm audit --audit-level=moderate` found 0 vulnerabilities.
+- `http://127.0.0.1:5173/auth` returned HTTP 200.
+- In-app browser confirmed the Google sign-in button is enabled and the missing-env warning is not visible.
+- Supabase migration list contains `initial_schema` and `harden_rls_and_indexes`.
+- Supabase security advisors returned no lints.
+
 ## Notes For Phase 3
 
 Phase 3 can now replace the placeholder authenticated screen with the real dashboard UI. The auth boundary is already in place, so dashboard data hooks can assume an authenticated user.
-

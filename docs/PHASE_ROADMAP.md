@@ -22,7 +22,7 @@ Exit criteria:
 
 Goal: Create the Vite app and connect it to Supabase Auth.
 
-Status: Implemented app foundation. Final verification requires a real Supabase project with Google OAuth credentials.
+Status: Implemented app foundation and created the dedicated Supabase project. Final sign-in verification requires Google OAuth credentials configured in Supabase.
 
 Build:
 
@@ -222,4 +222,3 @@ Ready-to-use steps:
 4. Deploy to GitHub Pages.
 5. Install on mobile.
 6. Verify auth, data sync, and core flows.
-
