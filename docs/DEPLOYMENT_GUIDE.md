@@ -12,19 +12,19 @@ This guide is intentionally phase-aware. The project should not be deployed as a
 
 ## Local Development Setup
 
-After Phase 2 scaffolds the app, local setup will use:
+Local setup uses:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Expected environment variables:
+Expected environment variables in `.env`:
 
 ```text
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_APP_BASE_PATH=
+VITE_APP_BASE_PATH=/
 ```
 
 Do not expose service-role keys in the frontend.
@@ -34,9 +34,10 @@ Do not expose service-role keys in the frontend.
 1. Create a Supabase project.
 2. Open SQL Editor.
 3. Run `supabase/migrations/0001_initial_schema.sql`.
-4. Confirm tables were created.
-5. Confirm Row Level Security is enabled.
-6. In Authentication settings, configure site URL and redirect URLs after the app URL is known.
+4. Copy the project URL and anon key into `.env`.
+5. Confirm tables were created.
+6. Confirm Row Level Security is enabled.
+7. In Authentication settings, configure site URL and redirect URLs after the app URL is known.
 
 Local redirect URL for Vite:
 
