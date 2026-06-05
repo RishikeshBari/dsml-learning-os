@@ -22,6 +22,8 @@ Exit criteria:
 
 Goal: Create the Vite app and connect it to Supabase Auth.
 
+Status: Implemented app foundation. Final verification requires a real Supabase project with Google OAuth credentials.
+
 Build:
 
 - React + Vite + TypeScript scaffold
@@ -30,8 +32,9 @@ Build:
 - Environment variable contract
 - Google sign-in/sign-up
 - Session persistence
-- Protected app routes
-- Profile and settings bootstrap
+- Protected dashboard route
+- Profile, settings, and class schedule bootstrap
+- Missing-environment fallback for local setup
 
 Ready-to-use steps:
 
