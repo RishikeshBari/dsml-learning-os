@@ -69,6 +69,25 @@ const promptTypes: PromptType[] = [
   "coding",
 ];
 
+const geminiPromptSchema = {
+  items: {
+    properties: {
+      prompt: {
+        type: "string",
+      },
+      prompt_type: {
+        enum: promptTypes,
+        type: "string",
+      },
+    },
+    required: ["prompt_type", "prompt"],
+    type: "object",
+  },
+  maxItems: 4,
+  minItems: 4,
+  type: "array",
+};
+
 const bucketWeight: Record<BucketStatus, number> = {
   G: 2,
   R: 0,
@@ -192,20 +211,11 @@ function parseGeminiPromptItems(text: string): GeminiPromptItem[] {
 }
 
 function buildGeminiPromptRequest(topic: RetrievalTopic) {
-  return `Create exactly four DS/ML retrieval practice prompts for this topic.
+  const notes = topic.instructor_notes?.trim()
+    ? ` Notes: ${topic.instructor_notes.trim().slice(0, 300)}`
+    : "";
 
-Topic: ${topic.name}
-Module: ${topic.moduleName}
-Current bucket: ${topic.bucket}
-Instructor notes: ${topic.instructor_notes ?? "None"}
-
-Return only JSON. Use this exact shape:
-[
-  {"prompt_type":"conceptual","prompt":"..."},
-  {"prompt_type":"interview","prompt":"..."},
-  {"prompt_type":"practical","prompt":"..."},
-  {"prompt_type":"coding","prompt":"..."}
-]`;
+  return `Create four short retrieval questions about ${topic.name} in ${topic.moduleName}: conceptual, interview, practical, and coding.${notes}`;
 }
 
 export function useRetrievalEngine() {
@@ -556,9 +566,11 @@ export function useRetrievalEngine() {
       for (const topic of session.topics) {
         const result = await generateGeminiText({
           apiKey,
+          maxOutputTokens: 700,
           prompt: buildGeminiPromptRequest(topic),
-          systemInstruction:
-            "You create concise, high-signal DS/ML retrieval prompts. Return strict JSON only.",
+          responseJsonSchema: geminiPromptSchema,
+          responseMimeType: "application/json",
+          timeoutMs: 60000,
         });
         const items = parseGeminiPromptItems(result);
 

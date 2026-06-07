@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented and partially verified. Local key management and the no-key retrieval path are verified; successful Gemini generation requires a real API key.
+Implemented and verified with a user-provided Gemini key. Local key management, no-key retrieval behavior, direct Gemini connectivity, and structured retrieval prompt generation are verified.
 
 ## Recommendation
 
@@ -13,7 +13,8 @@ Use a free-first, user-owned Gemini API key from Google AI Studio. The app store
 - Settings page available at `/settings`.
 - Gemini API key save, test, and clear controls.
 - Browser-local key storage.
-- REST client for `gemini-3.5-flash`.
+- REST client for `gemini-2.5-flash`.
+- Structured output schema for retrieval prompts.
 - Retrieval page Gemini prompt generation.
 - Gemini prompts are stored in `retrieval_prompts` with `source = 'gemini'`.
 - Generated prompt types cover conceptual, interview, practical, and coding practice.
@@ -35,4 +36,4 @@ Use a free-first, user-owned Gemini API key from Google AI Studio. The app store
 
 - The API key remains in browser local storage.
 - The deterministic system prompts from Phase 5 still work without Gemini.
-- Full success testing requires a real Gemini API key.
+- Direct Gemini prompt generation was verified without committing the API key.
