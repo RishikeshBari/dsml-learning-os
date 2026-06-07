@@ -4,6 +4,8 @@ A premium personal learning operating system for a 2-year Data Science and Machi
 
 This project is being built in phases. Phase artifacts are organized in `docs/phases/`, feature code lives under `src/features/`, and database changes live under `supabase/migrations/`.
 
+Public app URL: https://rishikeshbari.github.io/dsml-learning-os/
+
 ## Current Phase
 
 Phase 2: Authentication + Supabase setup
