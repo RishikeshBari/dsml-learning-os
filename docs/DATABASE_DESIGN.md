@@ -170,7 +170,8 @@ Important columns:
 
 ### `retrieval_responses`
 
-User responses and self-scored retrieval performance.
+User responses, AI mentor feedback, and optional user-overridden retrieval
+scores.
 
 Important columns:
 
@@ -178,7 +179,23 @@ Important columns:
 - `retrieval_prompt_id`
 - `response`
 - `score`
+- `score_overridden`
+- `ai_score`
+- `ai_is_correct`
+- `ai_confidence`
+- `ai_feedback`
+- `ai_what_was_good`
+- `ai_what_was_missing`
+- `ai_corrected_answer`
+- `ai_next_action`
+- `ai_bucket_suggestion`
+- `ai_bucket_reason`
+- `evaluated_at`
 - `completed_at`
+
+AI evaluation is requested only after the answer is saved. The AI score is used
+by default, but a manual score override takes precedence. Bucket suggestions
+are advisory and never update a topic automatically.
 
 ### `coding_practice`
 
@@ -226,6 +243,10 @@ Important columns:
 - `coding_score`
 - `retrieval_score`
 - `mastery_score`
+
+Scores are normalized to percentages. Revision and coding scores use their
+0-5 activity averages. Retrieval uses the manual override when present,
+otherwise the AI score, with the legacy response score as a fallback.
 - `snapshot_date`
 
 ### `notifications`
@@ -332,4 +353,3 @@ Indexes prioritize dashboard and analytics queries:
 - `projects(user_id, status)`
 - `mastery_snapshots(user_id, snapshot_date)`
 - `notifications(user_id, scheduled_for, status)`
-

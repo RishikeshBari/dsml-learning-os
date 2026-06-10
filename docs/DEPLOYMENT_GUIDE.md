@@ -64,11 +64,15 @@ https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPOSITORY_NAME
 ## Gemini Setup
 
 1. Create a Gemini API key in Google AI Studio.
-2. In the app, go to Settings.
-3. Save the API key.
-4. Generate questions on demand from Retrieval or Topic detail screens.
+2. Add it to Supabase Edge Function secrets as `GEMINI_API_KEY`.
+3. Deploy `supabase/functions/evaluate-response`.
+4. In the app, go to Settings and optionally save a browser-local key for
+   retrieval prompt generation.
+5. Generate questions or save a retrieval answer to test both Gemini flows.
 
-For production hardening, move Gemini calls into a Supabase Edge Function so the browser does not directly call Gemini.
+Saved-answer evaluation always calls Gemini through the authenticated Edge
+Function. Never add the API key to a `VITE_` environment variable or commit it
+to Git.
 
 ## Email Reminder Setup
 
@@ -142,8 +146,9 @@ jobs:
 - Mobile layout has no overflow.
 - Dark and light themes are readable.
 - Gemini handles missing API key, invalid key, and quota errors.
+- Saved answers receive structured AI feedback from `evaluate-response`.
+- Manual score override works without automatically changing topic buckets.
 - Email reminders can be tested manually.
 - App installs as a PWA on mobile.
 - Build output has no TypeScript errors.
 - No secret keys are committed.
-

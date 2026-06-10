@@ -8,6 +8,12 @@ export type Json =
 
 export type BucketStatus = "R" | "S" | "G";
 export type BucketSuggestionStatus = "pending" | "accepted" | "rejected";
+export type AiConfidence = "low" | "medium" | "high";
+export type AiNextAction =
+  | "revise_again"
+  | "practice_coding"
+  | "move_forward"
+  | "mark_for_sunday_retrieval";
 export type ProjectStatus = "not_started" | "in_progress" | "completed";
 export type PromptSource = "system" | "gemini";
 export type PromptType = "conceptual" | "interview" | "practical" | "coding";
@@ -323,32 +329,68 @@ export type Database = {
       };
       retrieval_responses: {
         Row: {
+          ai_bucket_reason: string | null;
+          ai_bucket_suggestion: BucketStatus | null;
+          ai_confidence: AiConfidence | null;
+          ai_corrected_answer: string | null;
+          ai_feedback: string | null;
+          ai_is_correct: boolean | null;
+          ai_next_action: AiNextAction | null;
+          ai_score: number | null;
+          ai_what_was_good: string[] | null;
+          ai_what_was_missing: string[] | null;
           completed_at: string | null;
           created_at: string;
+          evaluated_at: string | null;
           id: string;
           response: string | null;
           retrieval_prompt_id: string;
           score: number | null;
+          score_overridden: boolean;
           updated_at: string;
           user_id: string;
         };
         Insert: {
+          ai_bucket_reason?: string | null;
+          ai_bucket_suggestion?: BucketStatus | null;
+          ai_confidence?: AiConfidence | null;
+          ai_corrected_answer?: string | null;
+          ai_feedback?: string | null;
+          ai_is_correct?: boolean | null;
+          ai_next_action?: AiNextAction | null;
+          ai_score?: number | null;
+          ai_what_was_good?: string[] | null;
+          ai_what_was_missing?: string[] | null;
           completed_at?: string | null;
           created_at?: string;
+          evaluated_at?: string | null;
           id?: string;
           response?: string | null;
           retrieval_prompt_id: string;
           score?: number | null;
+          score_overridden?: boolean;
           updated_at?: string;
           user_id: string;
         };
         Update: {
+          ai_bucket_reason?: string | null;
+          ai_bucket_suggestion?: BucketStatus | null;
+          ai_confidence?: AiConfidence | null;
+          ai_corrected_answer?: string | null;
+          ai_feedback?: string | null;
+          ai_is_correct?: boolean | null;
+          ai_next_action?: AiNextAction | null;
+          ai_score?: number | null;
+          ai_what_was_good?: string[] | null;
+          ai_what_was_missing?: string[] | null;
           completed_at?: string | null;
           created_at?: string;
+          evaluated_at?: string | null;
           id?: string;
           response?: string | null;
           retrieval_prompt_id?: string;
           score?: number | null;
+          score_overridden?: boolean;
           updated_at?: string;
           user_id?: string;
         };

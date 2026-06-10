@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   CircleSlash,
   ClipboardCheck,
+  LoaderCircle,
   Play,
   Save,
   Sparkles,
@@ -12,12 +13,14 @@ import {
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { ResponseEvaluationPanel } from "@/features/evaluation/ResponseEvaluationPanel";
 import { getStoredGeminiApiKey } from "@/features/gemini/geminiStorage";
-import type { PromptWithResponse } from "@/features/retrieval/useRetrievalEngine";
-import { useRetrievalEngine } from "@/features/retrieval/useRetrievalEngine";
+import {
+  getEffectiveResponseScore,
+  type PromptWithResponse,
+  useRetrievalEngine,
+} from "@/features/retrieval/useRetrievalEngine";
 import type { PromptType, RetrievalStatus } from "@/types/database";
-
-const scoreOptions = [0, 1, 2, 3, 4, 5];
 
 const promptLabels: Record<PromptType, string> = {
   coding: "Coding",
@@ -66,6 +69,10 @@ export function RetrievalPage() {
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, number>>({});
   const [geminiNotice, setGeminiNotice] = useState("");
+  const [evaluatingPromptId, setEvaluatingPromptId] = useState("");
+  const [evaluationErrors, setEvaluationErrors] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     if (!scheduledFor && data?.nextSunday) {
@@ -99,18 +106,40 @@ export function RetrievalPage() {
 
   async function handleSaveResponse(prompt: PromptWithResponse) {
     const response = responses[prompt.id] ?? prompt.response?.response ?? "";
-    const score = scores[prompt.id] ?? prompt.response?.score ?? 3;
 
     if (!response.trim()) {
       return;
     }
 
-    await retrieval.saveResponse.mutateAsync({
-      promptId: prompt.id,
-      response,
-      responseId: prompt.response?.id,
-      score,
-    });
+    setEvaluatingPromptId(prompt.id);
+    setEvaluationErrors((currentErrors) => ({
+      ...currentErrors,
+      [prompt.id]: "",
+    }));
+
+    try {
+      const result = await retrieval.saveResponse.mutateAsync({
+        promptId: prompt.id,
+        response,
+        responseId: prompt.response?.id,
+      });
+
+      if (result.evaluationError) {
+        setEvaluationErrors((currentErrors) => ({
+          ...currentErrors,
+          [prompt.id]: `Your answer was saved. ${result.evaluationError}`,
+        }));
+      } else if (result.evaluation) {
+        const evaluationScore = result.evaluation.score;
+
+        setScores((currentScores) => ({
+          ...currentScores,
+          [prompt.id]: evaluationScore,
+        }));
+      }
+    } finally {
+      setEvaluatingPromptId("");
+    }
   }
 
   async function handleGenerateGeminiPrompts() {
@@ -429,52 +458,34 @@ export function RetrievalPage() {
 
             <div className="mt-6 divide-y divide-ink-100 dark:divide-white/10">
               {activeSession.prompts.map((prompt) => {
+                const savedResponse = prompt.response;
                 const responseValue =
-                  responses[prompt.id] ?? prompt.response?.response ?? "";
+                  responses[prompt.id] ?? savedResponse?.response ?? "";
                 const scoreValue =
-                  scores[prompt.id] ?? prompt.response?.score ?? 3;
+                  scores[prompt.id] ??
+                  getEffectiveResponseScore(savedResponse) ??
+                  3;
+                const isEvaluating = evaluatingPromptId === prompt.id;
 
                 return (
                   <div className="grid gap-4 py-5" key={prompt.id}>
-                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_140px]">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-lg bg-mint-500/10 px-2 py-1 text-xs font-semibold text-mint-600 dark:text-mint-400">
-                            {promptLabels[prompt.prompt_type]}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-lg bg-mint-500/10 px-2 py-1 text-xs font-semibold text-mint-600 dark:text-mint-400">
+                          {promptLabels[prompt.prompt_type]}
+                        </span>
+                        {prompt.source === "gemini" ? (
+                          <span className="rounded-lg bg-signal-amber/10 px-2 py-1 text-xs font-semibold text-signal-amber">
+                            Gemini
                           </span>
-                          {prompt.source === "gemini" ? (
-                            <span className="rounded-lg bg-signal-amber/10 px-2 py-1 text-xs font-semibold text-signal-amber">
-                              Gemini
-                            </span>
-                          ) : null}
-                          <span className="text-xs text-ink-500 dark:text-white/50">
-                            {prompt.topicName} - {prompt.moduleName}
-                          </span>
-                        </div>
-                        <p className="mt-3 text-sm leading-6 text-ink-700 dark:text-white/75">
-                          {prompt.prompt}
-                        </p>
+                        ) : null}
+                        <span className="text-xs text-ink-500 dark:text-white/50">
+                          {prompt.topicName} - {prompt.moduleName}
+                        </span>
                       </div>
-                      <label className="block">
-                        <span className="text-sm font-medium">Score</span>
-                        <select
-                          className="mt-2 w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-mint-500 dark:border-white/10 dark:bg-white/5"
-                          disabled={activeSessionIsClosed}
-                          onChange={(event) =>
-                            setScores((currentScores) => ({
-                              ...currentScores,
-                              [prompt.id]: Number(event.target.value),
-                            }))
-                          }
-                          value={scoreValue}
-                        >
-                          {scoreOptions.map((score) => (
-                            <option key={score} value={score}>
-                              {score}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <p className="mt-3 text-sm leading-6 text-ink-700 dark:text-white/75">
+                        {prompt.prompt}
+                      </p>
                     </div>
 
                     <label className="block">
@@ -492,6 +503,52 @@ export function RetrievalPage() {
                       />
                     </label>
 
+                    {evaluationErrors[prompt.id] ? (
+                      <div className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-4 text-sm text-ink-700 dark:text-white/75">
+                        {evaluationErrors[prompt.id]}
+                      </div>
+                    ) : null}
+
+                    {savedResponse ? (
+                      <ResponseEvaluationPanel
+                        disabled={
+                          retrieval.isMutating || activeSessionIsClosed
+                        }
+                        onApplyScore={(score) =>
+                          retrieval.updateResponseScore.mutate({
+                            isOverride: true,
+                            responseId: savedResponse.id,
+                            score,
+                          })
+                        }
+                        onScoreChange={(score) =>
+                          setScores((currentScores) => ({
+                            ...currentScores,
+                            [prompt.id]: score,
+                          }))
+                        }
+                        onUseAiScore={() => {
+                          const aiScore = savedResponse.ai_score;
+
+                          if (typeof aiScore !== "number") {
+                            return;
+                          }
+
+                          setScores((currentScores) => ({
+                            ...currentScores,
+                            [prompt.id]: aiScore,
+                          }));
+                          retrieval.updateResponseScore.mutate({
+                            isOverride: false,
+                            responseId: savedResponse.id,
+                            score: aiScore,
+                          });
+                        }}
+                        response={savedResponse}
+                        scoreValue={scoreValue}
+                      />
+                    ) : null}
+
                     <div className="flex justify-end">
                       <Button
                         className="gap-2"
@@ -502,8 +559,17 @@ export function RetrievalPage() {
                         }
                         onClick={() => handleSaveResponse(prompt)}
                       >
-                        <Save aria-hidden="true" className="h-4 w-4" />
-                        Save response
+                        {isEvaluating ? (
+                          <LoaderCircle
+                            aria-hidden="true"
+                            className="h-4 w-4 animate-spin"
+                          />
+                        ) : (
+                          <Save aria-hidden="true" className="h-4 w-4" />
+                        )}
+                        {isEvaluating
+                          ? "Evaluating your answer..."
+                          : "Save and evaluate"}
                       </Button>
                     </div>
                   </div>

@@ -98,7 +98,15 @@ Owns Sunday retrieval sessions, topic selection, retrieval prompts, and completi
 
 ### Gemini
 
-Owns API-key handling, prompt construction, request throttling, and response normalization. The key is user-provided. Gemini generation should be on demand and scoped to one topic or one session.
+Owns prompt construction, request throttling, response normalization, and AI
+answer evaluation. User-triggered retrieval prompt generation can use the
+browser-local key. Saved-answer evaluation runs through an authenticated
+Supabase Edge Function so the backend Gemini secret is never exposed to the
+frontend.
+
+The evaluation service returns structured JSON, stores feedback beside the
+retrieval response, and suggests a score and bucket. Users can override the
+score, while bucket movement remains manual.
 
 ### Reminders
 
@@ -157,6 +165,7 @@ Direct Supabase calls:
 
 Edge Functions:
 
+- `evaluate-response`
 - `generate-retrieval-prompts`
 - `generate-concept-explanation`
 - `send-due-review-reminders`

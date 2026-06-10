@@ -122,7 +122,10 @@ Ready-to-use steps:
 
 Goal: Generate useful questions and explanations on demand.
 
-Status: Implemented free-first Gemini key management and retrieval prompt generation. Local settings, no-key behavior, direct Gemini connectivity, and structured retrieval prompt generation are verified.
+Status: Implemented and verified. Retrieval prompt generation remains
+free-first, while saved-answer evaluation now uses a secure Supabase Edge
+Function, structured Gemini output, persistent mentor feedback, score override,
+and AI-aware mastery calculations.
 
 Build:
 
@@ -133,6 +136,10 @@ Build:
 - Interview questions
 - Coding exercises
 - Concept explanations
+- Secure AI response evaluation
+- Supportive score, feedback, corrected answer, and next action
+- Advisory bucket suggestion
+- Manual score override
 - Error states and quota-friendly behavior
 
 Ready-to-use steps:
@@ -141,6 +148,8 @@ Ready-to-use steps:
 2. Save it in Settings.
 3. Generate prompts for one topic.
 4. Confirm generated prompts are stored only after user action.
+5. Save an answer and confirm the AI feedback card appears.
+6. Override the score and restore the AI score.
 
 ## Phase 7: Email Reminders
 

@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/useAuth";
+import {
+  evaluateResponse,
+  type AiResponseEvaluation,
+} from "@/features/evaluation/evaluateResponse";
 import { generateGeminiText } from "@/features/gemini/geminiClient";
 import { supabase } from "@/lib/supabase/client";
 import type {
@@ -49,6 +53,17 @@ type SaveResponseInput = {
   promptId: string;
   response: string;
   responseId?: string;
+};
+
+type SaveResponseResult = {
+  evaluation: AiResponseEvaluation | null;
+  evaluationError: string | null;
+  responseId: string;
+};
+
+type UpdateResponseScoreInput = {
+  isOverride: boolean;
+  responseId: string;
   score: number;
 };
 
@@ -145,7 +160,7 @@ function getCandidateTopics(topics: RetrievalTopic[]) {
 
 function getSessionScore(prompts: PromptWithResponse[]) {
   const scores = prompts
-    .map((prompt) => prompt.response?.score)
+    .map((prompt) => getEffectiveResponseScore(prompt.response))
     .filter((score): score is number => typeof score === "number");
 
   if (scores.length === 0) {
@@ -155,6 +170,18 @@ function getSessionScore(prompts: PromptWithResponse[]) {
   return Math.round(
     (scores.reduce((total, score) => total + score, 0) / scores.length) * 10,
   ) / 10;
+}
+
+export function getEffectiveResponseScore(response: RetrievalResponse | null) {
+  if (!response) {
+    return null;
+  }
+
+  if (response.score_overridden && typeof response.score === "number") {
+    return response.score;
+  }
+
+  return response.ai_score ?? response.score;
 }
 
 function isPromptType(value: unknown): value is PromptType {
@@ -498,36 +525,134 @@ export function useRetrievalEngine() {
     onSuccess: invalidateRetrievalData,
   });
 
-  const saveResponse = useMutation({
-    mutationFn: async (values: SaveResponseInput) => {
+  const saveResponse = useMutation<SaveResponseResult, Error, SaveResponseInput>({
+    mutationFn: async (values) => {
       if (!user) {
         throw new Error("You need to be signed in to save retrieval responses.");
       }
 
-      const payload = {
+      const prompt = retrievalQuery.data?.sessions
+        .flatMap((session) => session.prompts)
+        .find((item) => item.id === values.promptId);
+
+      if (!prompt) {
+        throw new Error("The retrieval question could not be found.");
+      }
+
+      const responsePayload = {
+        ai_bucket_reason: null,
+        ai_bucket_suggestion: null,
+        ai_confidence: null,
+        ai_corrected_answer: null,
+        ai_feedback: null,
+        ai_is_correct: null,
+        ai_next_action: null,
+        ai_score: null,
+        ai_what_was_good: null,
+        ai_what_was_missing: null,
         completed_at: new Date().toISOString(),
+        evaluated_at: null,
         response: values.response.trim(),
-        score: values.score,
+        score: null,
+        score_overridden: false,
         user_id: user.id,
       };
 
+      let responseRow: RetrievalResponse;
+
       if (values.responseId) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("retrieval_responses")
-          .update(payload)
-          .eq("id", values.responseId);
+          .update(responsePayload)
+          .eq("id", values.responseId)
+          .select("*")
+          .single();
 
         if (error) {
           throw error;
         }
 
-        return;
+        responseRow = data as RetrievalResponse;
+      } else {
+        const { data, error } = await supabase
+          .from("retrieval_responses")
+          .insert({
+            ...responsePayload,
+            retrieval_prompt_id: values.promptId,
+          })
+          .select("*")
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        responseRow = data as RetrievalResponse;
       }
 
-      const { error } = await supabase.from("retrieval_responses").insert({
-        ...payload,
-        retrieval_prompt_id: values.promptId,
-      });
+      try {
+        const evaluation = await evaluateResponse({
+          expectedConceptOrReferenceAnswer: null,
+          moduleName: prompt.moduleName,
+          questionId: prompt.id,
+          questionText: prompt.prompt,
+          questionType: prompt.prompt_type,
+          topicId: prompt.topic_id,
+          topicName: prompt.topicName,
+          userAnswer: values.response.trim(),
+          userId: user.id,
+        });
+        const { error } = await supabase
+          .from("retrieval_responses")
+          .update({
+            ai_bucket_reason: evaluation.bucket_reason,
+            ai_bucket_suggestion: evaluation.bucket_suggestion,
+            ai_confidence: evaluation.confidence,
+            ai_corrected_answer: evaluation.corrected_answer,
+            ai_feedback: evaluation.feedback,
+            ai_is_correct: evaluation.is_correct,
+            ai_next_action: evaluation.next_action,
+            ai_score: evaluation.score,
+            ai_what_was_good: evaluation.what_was_good,
+            ai_what_was_missing: evaluation.what_was_missing,
+            evaluated_at: new Date().toISOString(),
+            score: evaluation.score,
+            score_overridden: false,
+          })
+          .eq("id", responseRow.id);
+
+        if (error) {
+          throw error;
+        }
+
+        return {
+          evaluation,
+          evaluationError: null,
+          responseId: responseRow.id,
+        };
+      } catch (evaluationError) {
+        return {
+          evaluation: null,
+          evaluationError:
+            evaluationError instanceof Error
+              ? evaluationError.message
+              : "Your answer was saved, but evaluation failed.",
+          responseId: responseRow.id,
+        };
+      }
+    },
+    onSuccess: invalidateRetrievalData,
+  });
+
+  const updateResponseScore = useMutation({
+    mutationFn: async (values: UpdateResponseScoreInput) => {
+      const { error } = await supabase
+        .from("retrieval_responses")
+        .update({
+          score: values.score,
+          score_overridden: values.isOverride,
+        })
+        .eq("id", values.responseId);
 
       if (error) {
         throw error;
@@ -621,15 +746,18 @@ export function useRetrievalEngine() {
       updateSessionStatus.isPending ||
       deleteSession.isPending ||
       saveResponse.isPending ||
+      updateResponseScore.isPending ||
       generateGeminiPrompts.isPending,
     mutationError:
       createSession.error ??
       updateSessionStatus.error ??
       deleteSession.error ??
       saveResponse.error ??
+      updateResponseScore.error ??
       generateGeminiPrompts.error,
     generateGeminiPrompts,
     saveResponse,
+    updateResponseScore,
     updateSessionStatus,
   };
 }

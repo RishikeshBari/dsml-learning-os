@@ -142,7 +142,11 @@ export function useAnalytics() {
           review.status === "scheduled" && review.due_date <= todayValue(),
       ).length;
       const responseScores = responses
-        .map((response) => response.score)
+        .map((response) =>
+          response.score_overridden && typeof response.score === "number"
+            ? response.score
+            : response.ai_score ?? response.score,
+        )
         .filter((score): score is number => typeof score === "number");
       const retrievalAverageScore =
         responseScores.length > 0
