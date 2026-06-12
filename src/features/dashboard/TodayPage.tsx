@@ -368,24 +368,34 @@ export function TodayPage() {
         </DashboardCard>
 
         <DashboardCard icon={FolderGit2} title="Projects">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-2xl font-semibold">
-                {dashboard.projectInProgressCount}
-              </p>
-              <p className="mt-2 text-sm text-ink-500 dark:text-white/55">
-                In progress
+          <div className="space-y-4">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-2xl font-semibold">
+                  {dashboard.projectAverageProgress}%
+                </p>
+                <p className="mt-1 text-sm text-ink-500 dark:text-white/55">
+                  Overall progress
+                </p>
+              </div>
+              <p className="text-right text-xs text-ink-500 dark:text-white/50">
+                {dashboard.projectActiveCount} active
+                <br />
+                {dashboard.projectCompletedCount} completed
               </p>
             </div>
-            <div className="flex h-16 items-end gap-1">
-              {[28, 42, 36, 52, 64].map((height, index) => (
-                <span
-                  className="w-3 rounded-t bg-mint-500/70"
-                  key={index}
-                  style={{ height }}
-                />
-              ))}
+            <div className="h-2 overflow-hidden rounded-full bg-ink-100 dark:bg-white/10">
+              <div
+                className="h-full rounded-full bg-mint-500"
+                style={{ width: `${dashboard.projectAverageProgress}%` }}
+              />
             </div>
+            <p className="truncate text-xs text-ink-500 dark:text-white/50">
+              Recent: {dashboard.projectRecentlyWorkedName ?? "No work logged"}
+              {dashboard.projectAttentionCount > 0
+                ? ` · ${dashboard.projectAttentionCount} need attention`
+                : ""}
+            </p>
           </div>
         </DashboardCard>
       </section>

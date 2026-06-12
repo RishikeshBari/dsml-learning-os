@@ -177,23 +177,31 @@ Ready-to-use steps:
 
 Goal: Connect projects to employability and mastery.
 
-Status: Core project tracker implemented as a usability improvement. Topic association and mastery contribution remain future enhancements.
+Status: Project growth tracker implemented. Mastery contribution remains a
+future enhancement.
 
 Build:
 
 - Project CRUD
-- GitHub link field
-- Status tracking
+- GitHub and demo links
+- Expanded status tracking
 - Module association
 - Topic associations
+- Custom phases with priority, due dates, reordering, and automatic progress
+- Flexible work logs with time, blockers, next steps, and linked phases
+- Progress, time, and phase-completion charts
+- Project-specific Notes & Ideas notebook
+- Dashboard and analytics project summaries
 - Project completion contribution to mastery
 
 Ready-to-use steps:
 
 1. Create a project.
 2. Link it to a module and topics.
-3. Move status to completed.
-4. Confirm analytics reflects project progress.
+3. Add phases and mark them in progress or completed.
+4. Add a work log whenever meaningful work is completed.
+5. Capture future improvements in Notes & Ideas.
+6. Confirm the dashboard and analytics reflect project progress.
 
 ## Phase 9: Analytics
 

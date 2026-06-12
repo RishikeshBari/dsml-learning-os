@@ -5,6 +5,7 @@ import type {
   BucketStatus,
   ClassSchedule,
   MasterySnapshot,
+  Project,
   RetrievalSession,
   Review,
   Topic,
@@ -28,7 +29,11 @@ type DashboardData = {
   moduleCount: number;
   nextClass: ClassSchedule | null;
   nextRetrievalSession: RetrievalSession | null;
-  projectInProgressCount: number;
+  projectActiveCount: number;
+  projectAttentionCount: number;
+  projectAverageProgress: number;
+  projectCompletedCount: number;
+  projectRecentlyWorkedName: string | null;
   topicCount: number;
   weakTopicCount: number;
   weeklyCompletedReviews: number;
@@ -186,9 +191,10 @@ export function useDashboardData() {
           .maybeSingle(),
         supabase
           .from("projects")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("status", "in_progress"),
+          .select(
+            "name, status, progress_percentage, last_worked_on, created_at",
+          )
+          .eq("user_id", user.id),
         supabase
           .from("mastery_snapshots")
           .select("*")
@@ -232,6 +238,46 @@ export function useDashboardData() {
       });
 
       const buckets = countBuckets(topics);
+      const projects = (projectsResult.data ?? []) as Pick<
+        Project,
+        | "created_at"
+        | "last_worked_on"
+        | "name"
+        | "progress_percentage"
+        | "status"
+      >[];
+      const activeProjects = projects.filter((project) =>
+        [
+          "planning",
+          "in_progress",
+          "blocked",
+          "testing",
+          "deployed",
+        ].includes(project.status),
+      );
+      const recentlyWorked = [...projects]
+        .filter((project) => project.last_worked_on)
+        .sort((first, second) =>
+          (second.last_worked_on ?? "").localeCompare(
+            first.last_worked_on ?? "",
+          ),
+        )[0];
+      const attentionCutoff = new Date();
+      attentionCutoff.setDate(attentionCutoff.getDate() - 7);
+      const attentionProjects = projects.filter((project) => {
+        if (project.status === "blocked") {
+          return true;
+        }
+        if (["completed", "archived"].includes(project.status)) {
+          return false;
+        }
+
+        return (
+          new Date(
+            `${(project.last_worked_on ?? project.created_at).slice(0, 10)}T00:00:00`,
+          ) < attentionCutoff
+        );
+      });
 
       return {
         buckets,
@@ -244,7 +290,21 @@ export function useDashboardData() {
         ),
         nextRetrievalSession:
           (retrievalResult.data as RetrievalSession | null) ?? null,
-        projectInProgressCount: projectsResult.count ?? 0,
+        projectActiveCount: activeProjects.length,
+        projectAttentionCount: attentionProjects.length,
+        projectAverageProgress:
+          projects.length > 0
+            ? Math.round(
+                projects.reduce(
+                  (total, project) => total + project.progress_percentage,
+                  0,
+                ) / projects.length,
+              )
+            : 0,
+        projectCompletedCount: projects.filter(
+          (project) => project.status === "completed",
+        ).length,
+        projectRecentlyWorkedName: recentlyWorked?.name ?? null,
         topicCount: topics.length,
         weakTopicCount: buckets.R + buckets.S,
         weeklyCompletedReviews: weeklyCompletedResult.count ?? 0,

@@ -14,7 +14,26 @@ export type AiNextAction =
   | "practice_coding"
   | "move_forward"
   | "mark_for_sunday_retrieval";
-export type ProjectStatus = "not_started" | "in_progress" | "completed";
+export type ProjectStatus =
+  | "idea"
+  | "not_started"
+  | "planning"
+  | "in_progress"
+  | "blocked"
+  | "testing"
+  | "deployed"
+  | "completed"
+  | "archived";
+export type ProjectPhaseStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed";
+export type ProjectPhasePriority = "low" | "medium" | "high";
+export type ProjectProgressSource =
+  | "phase"
+  | "work_log"
+  | "manual"
+  | "migration";
 export type PromptSource = "system" | "gemini";
 export type PromptType = "conceptual" | "interview" | "practical" | "coding";
 export type RetrievalStatus = "planned" | "in_progress" | "complete" | "missed";
@@ -401,10 +420,16 @@ export type Database = {
           completed_at: string | null;
           created_at: string;
           description: string | null;
+          demo_url: string | null;
           github_link: string | null;
           id: string;
+          last_worked_on: string | null;
           module_id: string | null;
           name: string;
+          next_action: string | null;
+          notes: string | null;
+          notes_updated_at: string | null;
+          progress_percentage: number;
           started_at: string | null;
           status: ProjectStatus;
           updated_at: string;
@@ -414,10 +439,16 @@ export type Database = {
           completed_at?: string | null;
           created_at?: string;
           description?: string | null;
+          demo_url?: string | null;
           github_link?: string | null;
           id?: string;
+          last_worked_on?: string | null;
           module_id?: string | null;
           name: string;
+          next_action?: string | null;
+          notes?: string | null;
+          notes_updated_at?: string | null;
+          progress_percentage?: number;
           started_at?: string | null;
           status?: ProjectStatus;
           updated_at?: string;
@@ -427,13 +458,157 @@ export type Database = {
           completed_at?: string | null;
           created_at?: string;
           description?: string | null;
+          demo_url?: string | null;
           github_link?: string | null;
           id?: string;
+          last_worked_on?: string | null;
           module_id?: string | null;
           name?: string;
+          next_action?: string | null;
+          notes?: string | null;
+          notes_updated_at?: string | null;
+          progress_percentage?: number;
           started_at?: string | null;
           status?: ProjectStatus;
           updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      project_topics: {
+        Row: {
+          created_at: string;
+          project_id: string;
+          topic_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          project_id: string;
+          topic_id: string;
+        };
+        Update: {
+          created_at?: string;
+          project_id?: string;
+          topic_id?: string;
+        };
+        Relationships: [];
+      };
+      project_phases: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          description: string | null;
+          due_date: string | null;
+          id: string;
+          order_index: number;
+          priority: ProjectPhasePriority;
+          project_id: string;
+          status: ProjectPhaseStatus;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string | null;
+          due_date?: string | null;
+          id?: string;
+          order_index?: number;
+          priority?: ProjectPhasePriority;
+          project_id: string;
+          status?: ProjectPhaseStatus;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          description?: string | null;
+          due_date?: string | null;
+          id?: string;
+          order_index?: number;
+          priority?: ProjectPhasePriority;
+          project_id?: string;
+          status?: ProjectPhaseStatus;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      project_work_logs: {
+        Row: {
+          blockers: string | null;
+          created_at: string;
+          id: string;
+          log_date: string;
+          next_step: string | null;
+          phase_id: string | null;
+          progress_snapshot: number;
+          project_id: string;
+          time_spent_minutes: number;
+          updated_at: string;
+          user_id: string;
+          work_summary: string;
+        };
+        Insert: {
+          blockers?: string | null;
+          created_at?: string;
+          id?: string;
+          log_date?: string;
+          next_step?: string | null;
+          phase_id?: string | null;
+          progress_snapshot?: number;
+          project_id: string;
+          time_spent_minutes: number;
+          updated_at?: string;
+          user_id: string;
+          work_summary: string;
+        };
+        Update: {
+          blockers?: string | null;
+          created_at?: string;
+          id?: string;
+          log_date?: string;
+          next_step?: string | null;
+          phase_id?: string | null;
+          progress_snapshot?: number;
+          project_id?: string;
+          time_spent_minutes?: number;
+          updated_at?: string;
+          user_id?: string;
+          work_summary?: string;
+        };
+        Relationships: [];
+      };
+      project_progress_snapshots: {
+        Row: {
+          created_at: string;
+          id: string;
+          progress_percentage: number;
+          project_id: string;
+          recorded_at: string;
+          source: ProjectProgressSource;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          progress_percentage: number;
+          project_id: string;
+          recorded_at?: string;
+          source: ProjectProgressSource;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          progress_percentage?: number;
+          project_id?: string;
+          recorded_at?: string;
+          source?: ProjectProgressSource;
           user_id?: string;
         };
         Relationships: [];
@@ -524,6 +699,8 @@ export type Database = {
       bucket_status: BucketStatus;
       prompt_source: PromptSource;
       prompt_type: PromptType;
+      project_phase_priority: ProjectPhasePriority;
+      project_phase_status: ProjectPhaseStatus;
       project_status: ProjectStatus;
       retrieval_status: RetrievalStatus;
       review_status: ReviewStatus;
@@ -548,6 +725,14 @@ export type RetrievalPrompt =
 export type RetrievalResponse =
   Database["public"]["Tables"]["retrieval_responses"]["Row"];
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
+export type ProjectTopic =
+  Database["public"]["Tables"]["project_topics"]["Row"];
+export type ProjectPhase =
+  Database["public"]["Tables"]["project_phases"]["Row"];
+export type ProjectWorkLog =
+  Database["public"]["Tables"]["project_work_logs"]["Row"];
+export type ProjectProgressSnapshot =
+  Database["public"]["Tables"]["project_progress_snapshots"]["Row"];
 export type MasterySnapshot =
   Database["public"]["Tables"]["mastery_snapshots"]["Row"];
 export type BucketSuggestion =

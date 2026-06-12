@@ -8,7 +8,11 @@ import {
   Target,
 } from "lucide-react";
 import { useAnalytics } from "@/features/analytics/useAnalytics";
-import type { BucketStatus, ProjectStatus } from "@/types/database";
+import {
+  projectStatuses,
+  projectStatusLabels,
+} from "@/features/projects/projectConfig";
+import type { BucketStatus } from "@/types/database";
 
 type MetricProps = {
   detail: string;
@@ -27,12 +31,6 @@ const bucketClasses: Record<BucketStatus, string> = {
   G: "bg-signal-green",
   R: "bg-signal-red",
   S: "bg-signal-amber",
-};
-
-const projectLabels: Record<ProjectStatus, string> = {
-  completed: "Completed",
-  in_progress: "In progress",
-  not_started: "Not started",
 };
 
 function MetricCard({ detail, icon: Icon, label, value }: MetricProps) {
@@ -165,14 +163,20 @@ export function AnalyticsPage() {
             <div className="rounded-lg bg-ink-100 p-2 text-ink-700 dark:bg-white/10 dark:text-white">
               <FolderGit2 aria-hidden="true" className="h-5 w-5" />
             </div>
-            <h2 className="text-sm font-semibold">Project Progress</h2>
+            <div>
+              <h2 className="text-sm font-semibold">Project Progress</h2>
+              <p className="mt-1 text-xs text-ink-500 dark:text-white/45">
+                {analytics.projectAverageProgress}% average phase progress
+              </p>
+            </div>
           </div>
           <div className="mt-5 space-y-4">
-            {(["not_started", "in_progress", "completed"] as ProjectStatus[]).map(
-              (status) => (
+            {projectStatuses
+              .filter((status) => analytics.projectCounts[status] > 0)
+              .map((status) => (
                 <div key={status}>
                   <div className="flex items-center justify-between text-sm">
-                    <span>{projectLabels[status]}</span>
+                    <span>{projectStatusLabels[status]}</span>
                     <span className="text-ink-500 dark:text-white/55">
                       {analytics.projectCounts[status]}
                     </span>
@@ -189,8 +193,12 @@ export function AnalyticsPage() {
                     />
                   </div>
                 </div>
-              ),
-            )}
+              ))}
+            {totalProjectCount === 0 ? (
+              <p className="text-sm text-ink-500 dark:text-white/50">
+                Project analytics appear after the first project is added.
+              </p>
+            ) : null}
           </div>
         </section>
       </section>

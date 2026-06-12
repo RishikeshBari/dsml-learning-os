@@ -25,6 +25,7 @@ type AnalyticsData = {
   dueReviewCount: number;
   moduleAnalytics: ModuleAnalytics[];
   moduleCount: number;
+  projectAverageProgress: number;
   projectCounts: Record<ProjectStatus, number>;
   retrievalAverageScore: number | null;
   retrievalCompletedCount: number;
@@ -43,9 +44,15 @@ const emptyBucketCounts: Record<BucketStatus, number> = {
 };
 
 const emptyProjectCounts: Record<ProjectStatus, number> = {
+  archived: 0,
+  blocked: 0,
   completed: 0,
+  deployed: 0,
+  idea: 0,
   in_progress: 0,
   not_started: 0,
+  planning: 0,
+  testing: 0,
 };
 
 function todayValue() {
@@ -184,6 +191,15 @@ export function useAnalytics() {
           })
           .sort((first, second) => second.topicCount - first.topicCount),
         moduleCount: modules.length,
+        projectAverageProgress:
+          projects.length > 0
+            ? Math.round(
+                projects.reduce(
+                  (total, project) => total + project.progress_percentage,
+                  0,
+                ) / projects.length,
+              )
+            : 0,
         projectCounts,
         retrievalAverageScore,
         retrievalCompletedCount: sessions.filter(

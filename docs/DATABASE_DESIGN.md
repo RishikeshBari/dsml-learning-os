@@ -221,14 +221,46 @@ Important columns:
 - `name`
 - `description`
 - `github_link`
+- `demo_url`
 - `status`
+- `progress_percentage`
 - `module_id`
+- `next_action`
+- `notes`
+- `notes_updated_at`
+- `last_worked_on`
 - `started_at`
 - `completed_at`
 
 ### `project_topics`
 
 Many-to-many relationship between projects and topics.
+
+### `project_phases`
+
+Ordered, user-defined phases that calculate project progress.
+
+Important columns:
+
+- `project_id`
+- `user_id`
+- `title`
+- `description`
+- `status`
+- `priority`
+- `order_index`
+- `due_date`
+- `completed_at`
+
+### `project_work_logs`
+
+Flexible project journal entries with time spent, blockers, next steps, an
+optional linked phase, and the project progress captured at log time.
+
+### `project_progress_snapshots`
+
+Chart-ready progress history created when phase progress changes, a manual
+status changes progress, or a work log is saved.
 
 ### `mastery_snapshots`
 
