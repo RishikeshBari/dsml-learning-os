@@ -1,18 +1,25 @@
 import {
   CalendarPlus,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CircleSlash,
   ClipboardCheck,
   LoaderCircle,
   Play,
   Save,
   Sparkles,
-  Target,
   Trash2,
 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ResponseEvaluationPanel } from "@/features/evaluation/ResponseEvaluationPanel";
 import { getStoredGeminiApiKey } from "@/features/gemini/geminiStorage";
 import {
@@ -20,20 +27,27 @@ import {
   type PromptWithResponse,
   useRetrievalEngine,
 } from "@/features/retrieval/useRetrievalEngine";
-import type { PromptType, RetrievalStatus } from "@/types/database";
+import type {
+  BucketStatus,
+  PromptType,
+  RetrievalStatus,
+} from "@/types/database";
+
+type RetrievalTopicGroup = {
+  averageScore: number | null;
+  completedCount: number;
+  key: string;
+  moduleName: string;
+  prompts: PromptWithResponse[];
+  topicBucket: BucketStatus;
+  topicName: string;
+};
 
 const promptLabels: Record<PromptType, string> = {
   coding: "Coding",
   conceptual: "Concept",
   interview: "Interview",
   practical: "Practical",
-};
-
-const statusLabels: Record<RetrievalStatus, string> = {
-  complete: "Complete",
-  in_progress: "In progress",
-  missed: "Missed",
-  planned: "Planned",
 };
 
 function formatDateLabel(dateValue: string) {
@@ -44,25 +58,187 @@ function formatDateLabel(dateValue: string) {
   }).format(new Date(`${dateValue}T00:00:00`));
 }
 
-function getSessionTone(status: RetrievalStatus) {
+function getSessionStatusBadge(status: RetrievalStatus) {
   if (status === "complete") {
-    return "text-signal-green bg-signal-green/10";
+    return <StatusBadge tone="green">Complete</StatusBadge>;
   }
 
   if (status === "missed") {
-    return "text-signal-red bg-signal-red/10";
+    return <StatusBadge tone="red">Missed</StatusBadge>;
   }
 
   if (status === "in_progress") {
-    return "text-signal-amber bg-signal-amber/10";
+    return <StatusBadge tone="amber">In progress</StatusBadge>;
   }
 
-  return "text-mint-500 bg-mint-500/10";
+  return <StatusBadge tone="mint">Planned</StatusBadge>;
+}
+
+function buildTopicGroups(
+  prompts: PromptWithResponse[],
+  query: string,
+): RetrievalTopicGroup[] {
+  const groups = new Map<string, PromptWithResponse[]>();
+
+  for (const prompt of prompts) {
+    groups.set(prompt.topic_id, [
+      ...(groups.get(prompt.topic_id) ?? []),
+      prompt,
+    ]);
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return [...groups.entries()]
+    .map(([topicId, topicPrompts]) => {
+      const firstPrompt = topicPrompts[0];
+      const summaryMatches = `${firstPrompt.moduleName} ${firstPrompt.topicName}`
+        .toLowerCase()
+        .includes(normalizedQuery);
+      const matchingPrompts =
+        normalizedQuery && !summaryMatches
+          ? topicPrompts.filter((prompt) =>
+              prompt.prompt.toLowerCase().includes(normalizedQuery),
+            )
+          : topicPrompts;
+      const scores = matchingPrompts
+        .map((prompt) => getEffectiveResponseScore(prompt.response))
+        .filter((score): score is number => typeof score === "number");
+
+      return {
+        averageScore:
+          scores.length > 0
+            ? Math.round(
+                (scores.reduce((total, score) => total + score, 0) /
+                  scores.length) *
+                  10,
+              ) / 10
+            : null,
+        completedCount: matchingPrompts.filter(
+          (prompt) => prompt.response?.completed_at,
+        ).length,
+        key: topicId,
+        moduleName: firstPrompt.moduleName,
+        prompts: matchingPrompts,
+        topicBucket: firstPrompt.topicBucket,
+        topicName: firstPrompt.topicName,
+      };
+    })
+    .filter((group) => group.prompts.length > 0)
+    .sort(
+      (first, second) =>
+        first.moduleName.localeCompare(second.moduleName) ||
+        first.topicName.localeCompare(second.topicName) ||
+        second.prompts[0].created_at.localeCompare(
+          first.prompts[0].created_at,
+        ),
+    );
+}
+
+function PromptEditor({
+  activeSessionIsClosed,
+  evaluationError,
+  isEvaluating,
+  isMutating,
+  onResponseChange,
+  onSave,
+  onScoreChange,
+  onUseAiScore,
+  onApplyScore,
+  prompt,
+  responseValue,
+  scoreValue,
+}: {
+  activeSessionIsClosed: boolean;
+  evaluationError: string;
+  isEvaluating: boolean;
+  isMutating: boolean;
+  onApplyScore: (score: number) => void;
+  onResponseChange: (value: string) => void;
+  onSave: () => void;
+  onScoreChange: (score: number) => void;
+  onUseAiScore: () => void;
+  prompt: PromptWithResponse;
+  responseValue: string;
+  scoreValue: number;
+}) {
+  const savedResponse = prompt.response;
+
+  return (
+    <div className="grid gap-4 py-5 first:pt-0 last:pb-0">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge tone="mint">
+            {promptLabels[prompt.prompt_type]}
+          </StatusBadge>
+          {prompt.source === "gemini" ? (
+            <StatusBadge tone="amber">Gemini</StatusBadge>
+          ) : null}
+          {savedResponse?.completed_at ? (
+            <StatusBadge tone="green">Answered</StatusBadge>
+          ) : (
+            <StatusBadge>Open</StatusBadge>
+          )}
+        </div>
+        <p className="mt-3 text-sm leading-6 text-ink-700 dark:text-white/75">
+          {prompt.prompt}
+        </p>
+      </div>
+
+      <label className="block">
+        <span className="text-sm font-medium">Response</span>
+        <textarea
+          className="mt-2 min-h-28 w-full resize-y rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-mint-500 dark:border-white/10 dark:bg-white/5"
+          disabled={activeSessionIsClosed}
+          onChange={(event) => onResponseChange(event.target.value)}
+          value={responseValue}
+        />
+      </label>
+
+      {evaluationError ? (
+        <div className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-4 text-sm text-ink-700 dark:text-white/75">
+          {evaluationError}
+        </div>
+      ) : null}
+
+      {savedResponse ? (
+        <ResponseEvaluationPanel
+          disabled={isMutating || activeSessionIsClosed}
+          onApplyScore={onApplyScore}
+          onScoreChange={onScoreChange}
+          onUseAiScore={onUseAiScore}
+          response={savedResponse}
+          scoreValue={scoreValue}
+        />
+      ) : null}
+
+      <div className="flex justify-end">
+        <Button
+          className="w-full gap-2 sm:w-auto"
+          disabled={
+            isMutating || activeSessionIsClosed || !responseValue.trim()
+          }
+          onClick={onSave}
+        >
+          {isEvaluating ? (
+            <LoaderCircle
+              aria-hidden="true"
+              className="h-4 w-4 animate-spin"
+            />
+          ) : (
+            <Save aria-hidden="true" className="h-4 w-4" />
+          )}
+          {isEvaluating ? "Evaluating your answer..." : "Save and evaluate"}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function RetrievalPage() {
   const retrieval = useRetrievalEngine();
   const data = retrieval.data;
+  const [searchParams] = useSearchParams();
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(45);
@@ -70,6 +246,10 @@ export function RetrievalPage() {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [geminiNotice, setGeminiNotice] = useState("");
   const [evaluatingPromptId, setEvaluatingPromptId] = useState("");
+  const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const [evaluationErrors, setEvaluationErrors] = useState<
     Record<string, string>
   >({});
@@ -80,6 +260,10 @@ export function RetrievalPage() {
     }
   }, [data?.nextSunday, scheduledFor]);
 
+  useEffect(() => {
+    setSearchQuery(searchParams.get("q") ?? "");
+  }, [searchParams]);
+
   const activeSession = useMemo(() => {
     const sessions = data?.sessions ?? [];
 
@@ -89,6 +273,27 @@ export function RetrievalPage() {
       null
     );
   }, [data?.sessions, selectedSessionId]);
+
+  useEffect(() => {
+    setExpandedTopicIds(new Set());
+  }, [activeSession?.id]);
+
+  const topicGroups = useMemo(
+    () => buildTopicGroups(activeSession?.prompts ?? [], searchQuery),
+    [activeSession?.prompts, searchQuery],
+  );
+  const moduleGroups = useMemo(() => {
+    const groups = new Map<string, RetrievalTopicGroup[]>();
+
+    for (const topicGroup of topicGroups) {
+      groups.set(topicGroup.moduleName, [
+        ...(groups.get(topicGroup.moduleName) ?? []),
+        topicGroup,
+      ]);
+    }
+
+    return [...groups.entries()];
+  }, [topicGroups]);
 
   async function handleCreateSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,11 +335,9 @@ export function RetrievalPage() {
           [prompt.id]: `Your answer was saved. ${result.evaluationError}`,
         }));
       } else if (result.evaluation) {
-        const evaluationScore = result.evaluation.score;
-
         setScores((currentScores) => ({
           ...currentScores,
-          [prompt.id]: evaluationScore,
+          [prompt.id]: result.evaluation?.score ?? 3,
         }));
       }
     } finally {
@@ -172,6 +375,20 @@ export function RetrievalPage() {
     }
   }
 
+  function toggleTopic(topicId: string) {
+    setExpandedTopicIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(topicId)) {
+        nextIds.delete(topicId);
+      } else {
+        nextIds.add(topicId);
+      }
+
+      return nextIds;
+    });
+  }
+
   if (retrieval.isLoading) {
     return (
       <div className="mx-auto max-w-7xl space-y-5">
@@ -195,7 +412,7 @@ export function RetrievalPage() {
     activeSession?.status === "complete" || activeSession?.status === "missed";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-7">
       {retrieval.mutationError ? (
         <div className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-4 text-sm text-ink-700 dark:text-white/75">
           {retrieval.mutationError.message}
@@ -233,7 +450,7 @@ export function RetrievalPage() {
             <label className="block">
               <span className="text-sm font-medium">Duration</span>
               <select
-                className="mt-2 w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-mint-500 dark:border-white/10 dark:bg-white/5"
+                className="mt-2 w-full rounded-lg border border-ink-200 px-3 py-2 text-sm outline-none focus:border-mint-500 dark:border-white/10"
                 onChange={(event) =>
                   setDurationMinutes(Number(event.target.value))
                 }
@@ -266,27 +483,28 @@ export function RetrievalPage() {
                       <p className="truncate text-sm font-semibold">
                         {topic.name}
                       </p>
-                      <p className="mt-1 text-xs text-ink-500 dark:text-white/50">
+                      <p className="mt-1 truncate text-xs text-ink-500 dark:text-white/50">
                         {topic.moduleName}
                       </p>
                     </div>
-                    <span className="rounded-lg bg-ink-100 px-2 py-1 text-xs font-semibold text-ink-700 dark:bg-white/10 dark:text-white">
-                      {topic.bucket}
-                    </span>
+                    <StatusBadge>{topic.bucket}</StatusBadge>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="mt-3 rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-6 text-sm text-ink-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55">
-                Add an active topic first.
-              </div>
+              <EmptyState
+                message="Add an active topic before creating a retrieval session."
+                title="No topics ready"
+              />
             )}
           </div>
 
           <Button
-            className="mt-5 gap-2"
+            className="mt-5 w-full gap-2 sm:w-auto"
             disabled={
-              retrieval.isMutating || candidateTopics.length === 0 || !scheduledFor
+              retrieval.isMutating ||
+              candidateTopics.length === 0 ||
+              !scheduledFor
             }
             type="submit"
           >
@@ -296,29 +514,19 @@ export function RetrievalPage() {
         </form>
 
         <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-mint-500/10 p-2 text-mint-500">
-                <Target aria-hidden="true" className="h-5 w-5" />
-              </div>
-              <h2 className="text-sm font-semibold">Session History</h2>
-            </div>
-            <p className="text-sm text-ink-500 dark:text-white/55">
-              {sessions.length} sessions
-            </p>
-          </div>
-
+          <SectionHeader
+            count={`${sessions.length} sessions`}
+            title="Session History"
+          />
           {sessions.length > 0 ? (
-            <div className="mt-5 divide-y divide-ink-100 dark:divide-white/10">
+            <div className="mt-4 divide-y divide-ink-100 dark:divide-white/10">
               {sessions.map((session) => (
                 <div
-                  className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_auto_auto]"
+                  className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                   key={session.id}
                 >
                   <button
-                    className={`min-w-0 text-left ${
-                      activeSession?.id === session.id ? "text-ink-950" : ""
-                    }`}
+                    className="min-w-0 text-left"
                     onClick={() => setSelectedSessionId(session.id)}
                     type="button"
                   >
@@ -327,69 +535,73 @@ export function RetrievalPage() {
                     </p>
                     <p className="mt-1 text-xs text-ink-500 dark:text-white/50">
                       {session.completedResponseCount}/{session.promptCount}{" "}
-                      prompts - {session.topicCount} topics
+                      answered · {session.topicCount} topics
                     </p>
                   </button>
-                  <span
-                    className={`self-start rounded-lg px-2 py-1 text-xs font-semibold ${getSessionTone(
-                      session.status,
-                    )}`}
-                  >
-                    {statusLabels[session.status]}
-                  </span>
-                  <Button
-                    aria-label={`Delete retrieval session for ${formatDateLabel(
-                      session.scheduled_for,
-                    )}`}
-                    className="gap-2"
-                    disabled={retrieval.isMutating}
-                    onClick={() =>
-                      handleDeleteSession(
-                        session.id,
-                        formatDateLabel(session.scheduled_for),
-                      )
-                    }
-                    variant="secondary"
-                  >
-                    <Trash2 aria-hidden="true" className="h-4 w-4" />
-                    Delete
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    {getSessionStatusBadge(session.status)}
+                    <button
+                      aria-label={`Delete retrieval session for ${formatDateLabel(
+                        session.scheduled_for,
+                      )}`}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ink-200 text-ink-500 transition hover:bg-ink-100 hover:text-signal-red dark:border-white/10 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-signal-red"
+                      disabled={retrieval.isMutating}
+                      onClick={() =>
+                        handleDeleteSession(
+                          session.id,
+                          formatDateLabel(session.scheduled_for),
+                        )
+                      }
+                      title="Delete session"
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-5 rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-8 text-sm text-ink-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55">
-              Retrieval sessions will appear here.
+            <div className="mt-4">
+              <EmptyState
+                message="Create a session to begin retrieval practice."
+                title="No retrieval sessions"
+              />
             </div>
           )}
         </section>
       </section>
 
-      <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
+      <section className="space-y-5">
         {activeSession ? (
-          <div>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-ink-100 p-2 text-ink-700 dark:bg-white/10 dark:text-white">
-                    <ClipboardCheck aria-hidden="true" className="h-5 w-5" />
-                  </div>
-                  <div>
+          <>
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="rounded-lg bg-ink-100 p-2 text-ink-700 dark:bg-white/10 dark:text-white">
+                  <ClipboardCheck aria-hidden="true" className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-sm font-semibold">
                       {formatDateLabel(activeSession.scheduled_for)}
                     </h2>
-                    <p className="mt-1 text-xs text-ink-500 dark:text-white/50">
-                      {activeSession.duration_minutes} minutes -{" "}
-                      {activeSession.averageScore ?? "No"} average score
-                    </p>
+                    {getSessionStatusBadge(activeSession.status)}
                   </div>
+                  <p className="mt-1 text-sm text-ink-500 dark:text-white/50">
+                    {activeSession.duration_minutes} minutes ·{" "}
+                    {activeSession.averageScore ?? "No"} average score ·{" "}
+                    {activeSession.completedResponseCount}/
+                    {activeSession.promptCount} answered
+                  </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Button
-                  className="gap-2"
-                  disabled={retrieval.isMutating || activeSession.topics.length === 0}
+                  className="gap-2 px-3"
+                  disabled={
+                    retrieval.isMutating || activeSession.topics.length === 0
+                  }
                   onClick={handleGenerateGeminiPrompts}
                   variant="secondary"
                 >
@@ -398,7 +610,7 @@ export function RetrievalPage() {
                 </Button>
                 {activeSession.status === "planned" ? (
                   <Button
-                    className="gap-2"
+                    className="gap-2 px-3"
                     disabled={retrieval.isMutating}
                     onClick={() =>
                       retrieval.updateSessionStatus.mutate({
@@ -412,7 +624,7 @@ export function RetrievalPage() {
                   </Button>
                 ) : null}
                 <Button
-                  className="gap-2"
+                  className="gap-2 px-3"
                   disabled={
                     retrieval.isMutating ||
                     activeSession.completedResponseCount === 0 ||
@@ -429,7 +641,7 @@ export function RetrievalPage() {
                   Complete
                 </Button>
                 <Button
-                  className="gap-2"
+                  className="gap-2 px-3"
                   disabled={retrieval.isMutating || activeSessionIsClosed}
                   onClick={() =>
                     retrieval.updateSessionStatus.mutate({
@@ -445,142 +657,189 @@ export function RetrievalPage() {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              {activeSession.topics.map((topic) => (
-                <span
-                  className="rounded-lg bg-ink-100 px-2 py-1 text-xs font-semibold text-ink-700 dark:bg-white/10 dark:text-white"
-                  key={topic.id}
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <SearchInput
+                className="max-w-2xl"
+                onChange={setSearchQuery}
+                value={searchQuery}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  className="gap-2 px-3"
+                  disabled={topicGroups.length === 0}
+                  onClick={() =>
+                    setExpandedTopicIds(
+                      new Set(topicGroups.map((group) => group.key)),
+                    )
+                  }
+                  variant="secondary"
                 >
-                  {topic.name} - {topic.bucket}
-                </span>
-              ))}
+                  <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                  Expand all
+                </Button>
+                <Button
+                  className="gap-2 px-3"
+                  disabled={expandedTopicIds.size === 0}
+                  onClick={() => setExpandedTopicIds(new Set())}
+                  variant="secondary"
+                >
+                  <ChevronUp aria-hidden="true" className="h-4 w-4" />
+                  Collapse all
+                </Button>
+              </div>
             </div>
 
-            <div className="mt-6 divide-y divide-ink-100 dark:divide-white/10">
-              {activeSession.prompts.map((prompt) => {
-                const savedResponse = prompt.response;
-                const responseValue =
-                  responses[prompt.id] ?? savedResponse?.response ?? "";
-                const scoreValue =
-                  scores[prompt.id] ??
-                  getEffectiveResponseScore(savedResponse) ??
-                  3;
-                const isEvaluating = evaluatingPromptId === prompt.id;
-
-                return (
-                  <div className="grid gap-4 py-5" key={prompt.id}>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-lg bg-mint-500/10 px-2 py-1 text-xs font-semibold text-mint-600 dark:text-mint-400">
-                          {promptLabels[prompt.prompt_type]}
-                        </span>
-                        {prompt.source === "gemini" ? (
-                          <span className="rounded-lg bg-signal-amber/10 px-2 py-1 text-xs font-semibold text-signal-amber">
-                            Gemini
-                          </span>
-                        ) : null}
-                        <span className="text-xs text-ink-500 dark:text-white/50">
-                          {prompt.topicName} - {prompt.moduleName}
-                        </span>
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-ink-700 dark:text-white/75">
-                        {prompt.prompt}
-                      </p>
-                    </div>
-
-                    <label className="block">
-                      <span className="text-sm font-medium">Response</span>
-                      <textarea
-                        className="mt-2 min-h-28 w-full resize-none rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-mint-500 dark:border-white/10 dark:bg-white/5"
-                        disabled={activeSessionIsClosed}
-                        onChange={(event) =>
-                          setResponses((currentResponses) => ({
-                            ...currentResponses,
-                            [prompt.id]: event.target.value,
-                          }))
-                        }
-                        value={responseValue}
-                      />
-                    </label>
-
-                    {evaluationErrors[prompt.id] ? (
-                      <div className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-4 text-sm text-ink-700 dark:text-white/75">
-                        {evaluationErrors[prompt.id]}
-                      </div>
-                    ) : null}
-
-                    {savedResponse ? (
-                      <ResponseEvaluationPanel
-                        disabled={
-                          retrieval.isMutating || activeSessionIsClosed
-                        }
-                        onApplyScore={(score) =>
-                          retrieval.updateResponseScore.mutate({
-                            isOverride: true,
-                            responseId: savedResponse.id,
-                            score,
-                          })
-                        }
-                        onScoreChange={(score) =>
-                          setScores((currentScores) => ({
-                            ...currentScores,
-                            [prompt.id]: score,
-                          }))
-                        }
-                        onUseAiScore={() => {
-                          const aiScore = savedResponse.ai_score;
-
-                          if (typeof aiScore !== "number") {
-                            return;
+            {moduleGroups.length > 0 ? (
+              <div className="space-y-7">
+                {moduleGroups.map(([moduleName, moduleTopics]) => (
+                  <section className="space-y-3" key={moduleName}>
+                    <SectionHeader
+                      count={`${moduleTopics.length} topics`}
+                      title={moduleName}
+                    />
+                    <div className="space-y-2">
+                      {moduleTopics.map((topicGroup) => (
+                        <CollapsibleCard
+                          isExpanded={expandedTopicIds.has(topicGroup.key)}
+                          key={topicGroup.key}
+                          onToggle={() => toggleTopic(topicGroup.key)}
+                          summary={
+                            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-medium text-ink-500 dark:text-white/45">
+                                  {topicGroup.moduleName}
+                                </p>
+                                <p className="mt-0.5 truncate text-sm font-semibold">
+                                  {topicGroup.topicName}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                <StatusBadge>
+                                  {topicGroup.topicBucket}
+                                </StatusBadge>
+                                <StatusBadge
+                                  tone={
+                                    topicGroup.completedCount ===
+                                    topicGroup.prompts.length
+                                      ? "green"
+                                      : "neutral"
+                                  }
+                                >
+                                  {topicGroup.completedCount}/
+                                  {topicGroup.prompts.length} answered
+                                </StatusBadge>
+                                {topicGroup.averageScore !== null ? (
+                                  <StatusBadge tone="mint">
+                                    {topicGroup.averageScore}/5
+                                  </StatusBadge>
+                                ) : null}
+                                <span className="text-xs text-ink-500 dark:text-white/45">
+                                  {formatDateLabel(
+                                    activeSession.scheduled_for,
+                                  )}
+                                </span>
+                              </div>
+                            </div>
                           }
+                        >
+                          <div className="divide-y divide-ink-100 dark:divide-white/10">
+                            {topicGroup.prompts.map((prompt) => {
+                              const savedResponse = prompt.response;
+                              const responseValue =
+                                responses[prompt.id] ??
+                                savedResponse?.response ??
+                                "";
+                              const scoreValue =
+                                scores[prompt.id] ??
+                                getEffectiveResponseScore(savedResponse) ??
+                                3;
 
-                          setScores((currentScores) => ({
-                            ...currentScores,
-                            [prompt.id]: aiScore,
-                          }));
-                          retrieval.updateResponseScore.mutate({
-                            isOverride: false,
-                            responseId: savedResponse.id,
-                            score: aiScore,
-                          });
-                        }}
-                        response={savedResponse}
-                        scoreValue={scoreValue}
-                      />
-                    ) : null}
+                              return (
+                                <PromptEditor
+                                  activeSessionIsClosed={
+                                    activeSessionIsClosed
+                                  }
+                                  evaluationError={
+                                    evaluationErrors[prompt.id] ?? ""
+                                  }
+                                  isEvaluating={
+                                    evaluatingPromptId === prompt.id
+                                  }
+                                  isMutating={retrieval.isMutating}
+                                  key={prompt.id}
+                                  onApplyScore={(score) => {
+                                    if (!savedResponse) {
+                                      return;
+                                    }
 
-                    <div className="flex justify-end">
-                      <Button
-                        className="gap-2"
-                        disabled={
-                          retrieval.isMutating ||
-                          activeSessionIsClosed ||
-                          !responseValue.trim()
-                        }
-                        onClick={() => handleSaveResponse(prompt)}
-                      >
-                        {isEvaluating ? (
-                          <LoaderCircle
-                            aria-hidden="true"
-                            className="h-4 w-4 animate-spin"
-                          />
-                        ) : (
-                          <Save aria-hidden="true" className="h-4 w-4" />
-                        )}
-                        {isEvaluating
-                          ? "Evaluating your answer..."
-                          : "Save and evaluate"}
-                      </Button>
+                                    retrieval.updateResponseScore.mutate({
+                                      isOverride: true,
+                                      responseId: savedResponse.id,
+                                      score,
+                                    });
+                                  }}
+                                  onResponseChange={(value) =>
+                                    setResponses((currentResponses) => ({
+                                      ...currentResponses,
+                                      [prompt.id]: value,
+                                    }))
+                                  }
+                                  onSave={() => handleSaveResponse(prompt)}
+                                  onScoreChange={(score) =>
+                                    setScores((currentScores) => ({
+                                      ...currentScores,
+                                      [prompt.id]: score,
+                                    }))
+                                  }
+                                  onUseAiScore={() => {
+                                    const aiScore = savedResponse?.ai_score;
+
+                                    if (
+                                      !savedResponse ||
+                                      typeof aiScore !== "number"
+                                    ) {
+                                      return;
+                                    }
+
+                                    setScores((currentScores) => ({
+                                      ...currentScores,
+                                      [prompt.id]: aiScore,
+                                    }));
+                                    retrieval.updateResponseScore.mutate({
+                                      isOverride: false,
+                                      responseId: savedResponse.id,
+                                      score: aiScore,
+                                    });
+                                  }}
+                                  prompt={prompt}
+                                  responseValue={responseValue}
+                                  scoreValue={scoreValue}
+                                />
+                              );
+                            })}
+                          </div>
+                        </CollapsibleCard>
+                      ))}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                message={
+                  searchQuery
+                    ? "Try a different module, topic, or question."
+                    : "Generate prompts for this session to begin."
+                }
+                title={searchQuery ? "No retrieval results" : "No prompts yet"}
+              />
+            )}
+          </>
         ) : (
-          <div className="rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-10 text-sm text-ink-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55">
-            Generate a retrieval session to begin.
-          </div>
+          <EmptyState
+            message="Generate a retrieval session to begin."
+            title="No active session"
+          />
         )}
       </section>
     </div>

@@ -1,16 +1,33 @@
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CircleSlash,
   RotateCcw,
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
-import { useLearningEngine } from "@/features/learning/useLearningEngine";
+import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  type ReviewWithTopic,
+  useLearningEngine,
+} from "@/features/learning/useLearningEngine";
 import type { ReviewStatus } from "@/types/database";
 
 type ReviewActionStatus = Exclude<ReviewStatus, "scheduled">;
+type ReviewGroup = {
+  description: string;
+  emptyMessage: string;
+  reviews: ReviewWithTopic[];
+  title: string;
+};
 
 const scoreOptions = [0, 1, 2, 3, 4, 5];
 
@@ -22,15 +39,129 @@ function formatDateLabel(dateValue: string) {
   }).format(new Date(`${dateValue}T00:00:00`));
 }
 
+function formatTimestamp(dateValue: string | null) {
+  if (!dateValue) {
+    return "Not recorded";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(dateValue));
+}
+
+function getStatusBadge(review: ReviewWithTopic) {
+  if (review.status === "complete") {
+    return <StatusBadge tone="green">Complete</StatusBadge>;
+  }
+
+  if (review.status === "partial") {
+    return <StatusBadge tone="amber">Partial</StatusBadge>;
+  }
+
+  if (review.status === "missed") {
+    return <StatusBadge tone="red">Missed</StatusBadge>;
+  }
+
+  return <StatusBadge tone="mint">Scheduled</StatusBadge>;
+}
+
+function ReviewSummary({ review }: { review: ReviewWithTopic }) {
+  return (
+    <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-medium text-ink-500 dark:text-white/45">
+          {review.moduleName}
+        </p>
+        <p className="mt-0.5 truncate text-sm font-semibold">
+          {review.topicName}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+        <StatusBadge>{review.topicBucket}</StatusBadge>
+        {getStatusBadge(review)}
+        {review.mastery_score !== null ? (
+          <StatusBadge tone="mint">{review.mastery_score}/5</StatusBadge>
+        ) : null}
+        <span className="text-xs text-ink-500 dark:text-white/45">
+          {formatDateLabel(review.due_date)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function RevisionsPage() {
   const learning = useLearningEngine();
+  const [searchParams] = useSearchParams();
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const data = learning.data;
-  const reviews = data?.reviews ?? [];
-  const dueReviews = reviews.filter((review) => review.due_date <= learning.today);
-  const upcomingReviews = reviews.filter(
-    (review) => review.due_date > learning.today,
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get("q") ?? "");
+  }, [searchParams]);
+
+  const groups = useMemo<ReviewGroup[]>(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const filteredReviews = (data?.reviews ?? []).filter((review) =>
+      `${review.moduleName} ${review.topicName}`
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+    const dueToday = filteredReviews.filter(
+      (review) =>
+        review.status === "scheduled" && review.due_date <= learning.today,
+    );
+    const upcoming = filteredReviews.filter(
+      (review) =>
+        review.status === "scheduled" && review.due_date > learning.today,
+    );
+    const completed = filteredReviews
+      .filter((review) => ["complete", "partial"].includes(review.status))
+      .sort((first, second) =>
+        (second.completed_at ?? "").localeCompare(first.completed_at ?? ""),
+      );
+    const missed = filteredReviews
+      .filter((review) => review.status === "missed")
+      .sort((first, second) =>
+        (second.completed_at ?? "").localeCompare(first.completed_at ?? ""),
+      );
+
+    return [
+      {
+        description: "Reviews due now, including overdue items.",
+        emptyMessage: "No reviews are due.",
+        reviews: dueToday,
+        title: "Due Today",
+      },
+      {
+        description: "Scheduled reviews that are coming next.",
+        emptyMessage: "No upcoming reviews.",
+        reviews: upcoming,
+        title: "Upcoming",
+      },
+      {
+        description: "Completed and partially completed review history.",
+        emptyMessage: "No completed reviews yet.",
+        reviews: completed,
+        title: "Completed",
+      },
+      {
+        description: "Reviews recorded as missed.",
+        emptyMessage: "No missed reviews.",
+        reviews: missed,
+        title: "Missed",
+      },
+    ];
+  }, [data?.reviews, learning.today, searchQuery]);
+
+  const visibleReviewIds = groups.flatMap((group) =>
+    group.reviews.map((review) => review.id),
   );
+  const visibleReviewCount = visibleReviewIds.length;
 
   async function handleReviewAction(
     reviewId: string,
@@ -45,10 +176,24 @@ export function RevisionsPage() {
     });
   }
 
+  function toggleReview(reviewId: string) {
+    setExpandedIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(reviewId)) {
+        nextIds.delete(reviewId);
+      } else {
+        nextIds.add(reviewId);
+      }
+
+      return nextIds;
+    });
+  }
+
   if (learning.isLoading) {
     return (
       <div className="mx-auto max-w-7xl space-y-5">
-        <div className="h-40 animate-pulse rounded-lg bg-ink-100 dark:bg-white/10" />
+        <div className="h-24 animate-pulse rounded-lg bg-ink-100 dark:bg-white/10" />
         <div className="h-80 animate-pulse rounded-lg bg-ink-100 dark:bg-white/10" />
       </div>
     );
@@ -63,45 +208,83 @@ export function RevisionsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-7">
       {learning.mutationError ? (
         <div className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-4 text-sm text-ink-700 dark:text-white/75">
           {learning.mutationError.message}
         </div>
       ) : null}
 
+      <section className="space-y-4">
+        <SectionHeader
+          actions={
+            <>
+              <Button
+                className="gap-2 px-3"
+                disabled={visibleReviewCount === 0}
+                onClick={() => setExpandedIds(new Set(visibleReviewIds))}
+                variant="secondary"
+              >
+                <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                Expand all
+              </Button>
+              <Button
+                className="gap-2 px-3"
+                disabled={expandedIds.size === 0}
+                onClick={() => setExpandedIds(new Set())}
+                variant="secondary"
+              >
+                <ChevronUp aria-hidden="true" className="h-4 w-4" />
+                Collapse all
+              </Button>
+            </>
+          }
+          count={`${visibleReviewCount} reviews`}
+          description="Scan the schedule first, then open only the review you need."
+          title="Revision Queue"
+        />
+        <SearchInput
+          className="max-w-2xl"
+          onChange={setSearchQuery}
+          value={searchQuery}
+        />
+      </section>
+
       {data?.pendingSuggestions.length ? (
-        <section className="rounded-lg border border-signal-amber/30 bg-signal-amber/10 p-5 shadow-soft dark:bg-signal-amber/10">
-          <div className="flex items-center gap-3">
-            <RotateCcw aria-hidden="true" className="h-5 w-5 text-signal-amber" />
-            <h2 className="text-sm font-semibold">Bucket Suggestions</h2>
-          </div>
-          <div className="mt-4 space-y-3">
+        <section className="rounded-lg border border-signal-amber/25 bg-signal-amber/[0.07] p-4">
+          <SectionHeader
+            count={`${data.pendingSuggestions.length} pending`}
+            title="Bucket Suggestions"
+          />
+          <div className="mt-3 divide-y divide-signal-amber/15">
             {data.pendingSuggestions.map((suggestion) => (
               <div
-                className="grid gap-3 border-b border-signal-amber/20 pb-3 last:border-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_auto]"
+                className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto]"
                 key={suggestion.id}
               >
-                <div>
-                  <p className="text-sm font-semibold">
-                    {suggestion.topicName}: {suggestion.from_bucket} to{" "}
-                    {suggestion.to_bucket}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {suggestion.topicName}
                   </p>
-                  <p className="mt-1 text-sm text-ink-600 dark:text-white/60">
+                  <p className="mt-1 text-xs text-ink-600 dark:text-white/55">
+                    {suggestion.from_bucket} to {suggestion.to_bucket} ·{" "}
                     {suggestion.reason}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
-                    className="gap-2"
+                    className="gap-2 px-3"
                     onClick={() => learning.acceptSuggestion.mutate(suggestion)}
                   >
                     <ThumbsUp aria-hidden="true" className="h-4 w-4" />
                     Accept
                   </Button>
                   <Button
-                    className="gap-2"
-                    onClick={() => learning.rejectSuggestion.mutate(suggestion.id)}
+                    aria-label={`Reject suggestion for ${suggestion.topicName}`}
+                    className="gap-2 px-3"
+                    onClick={() =>
+                      learning.rejectSuggestion.mutate(suggestion.id)
+                    }
                     variant="secondary"
                   >
                     <ThumbsDown aria-hidden="true" className="h-4 w-4" />
@@ -114,121 +297,154 @@ export function RevisionsPage() {
         </section>
       ) : null}
 
-      <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-mint-500/10 p-2 text-mint-500">
-              <RotateCcw aria-hidden="true" className="h-5 w-5" />
-            </div>
-            <h2 className="text-sm font-semibold">Due Reviews</h2>
-          </div>
-          <p className="text-sm text-ink-500 dark:text-white/55">
-            {dueReviews.length} due
-          </p>
-        </div>
+      {visibleReviewCount === 0 && searchQuery ? (
+        <EmptyState message="Try a different module or topic name." />
+      ) : (
+        groups.map((group) => (
+          <section className="space-y-3" key={group.title}>
+            <SectionHeader
+              count={`${group.reviews.length}`}
+              description={group.description}
+              title={group.title}
+            />
+            {group.reviews.length > 0 ? (
+              <div className="space-y-2">
+                {group.reviews.map((review) => {
+                  const isActionable =
+                    review.status === "scheduled" &&
+                    review.due_date <= learning.today;
 
-        {dueReviews.length > 0 ? (
-          <div className="mt-5 space-y-4">
-            {dueReviews.map((review) => (
-              <div
-                className="grid gap-3 rounded-lg border border-ink-100 p-4 dark:border-white/10 md:grid-cols-[minmax(0,1fr)_110px_auto]"
-                key={review.id}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
-                    {review.topicName}
-                  </p>
-                  <p className="mt-1 text-xs text-ink-500 dark:text-white/50">
-                    {review.moduleName} - Review {review.review_number} -{" "}
-                    {formatDateLabel(review.due_date)} - {review.topicBucket}
-                  </p>
-                </div>
-                <select
-                  className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-mint-500 dark:border-white/10 dark:bg-white/5"
-                  onChange={(event) =>
-                    setScores((currentScores) => ({
-                      ...currentScores,
-                      [review.id]: Number(event.target.value),
-                    }))
-                  }
-                  value={scores[review.id] ?? 3}
-                >
-                  {scoreOptions.map((score) => (
-                    <option key={score} value={score}>
-                      {score}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    className="gap-2"
-                    disabled={learning.isMutating}
-                    onClick={() => handleReviewAction(review.id, "complete")}
-                  >
-                    <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-                    Complete
-                  </Button>
-                  <Button
-                    disabled={learning.isMutating}
-                    onClick={() => handleReviewAction(review.id, "partial")}
-                    variant="secondary"
-                  >
-                    Partial
-                  </Button>
-                  <Button
-                    className="gap-2"
-                    disabled={learning.isMutating}
-                    onClick={() => handleReviewAction(review.id, "missed")}
-                    variant="secondary"
-                  >
-                    <CircleSlash aria-hidden="true" className="h-4 w-4" />
-                    Missed
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-5 rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-8 text-sm text-ink-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55">
-            No reviews are due.
-          </div>
-        )}
-      </section>
+                  return (
+                    <CollapsibleCard
+                      isExpanded={expandedIds.has(review.id)}
+                      key={review.id}
+                      onToggle={() => toggleReview(review.id)}
+                      summary={<ReviewSummary review={review} />}
+                    >
+                      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                        <div>
+                          <p className="text-sm font-semibold">
+                            Review {review.review_number}
+                          </p>
+                          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+                            <div>
+                              <dt className="text-xs text-ink-500 dark:text-white/45">
+                                Due date
+                              </dt>
+                              <dd className="mt-1 font-medium">
+                                {formatDateLabel(review.due_date)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-ink-500 dark:text-white/45">
+                                Completed
+                              </dt>
+                              <dd className="mt-1 font-medium">
+                                {formatTimestamp(review.completed_at)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs text-ink-500 dark:text-white/45">
+                                Mastery score
+                              </dt>
+                              <dd className="mt-1 font-medium">
+                                {review.mastery_score !== null
+                                  ? `${review.mastery_score}/5`
+                                  : "Not scored"}
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
 
-      <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-sm font-semibold">Upcoming Reviews</h2>
-          <p className="text-sm text-ink-500 dark:text-white/55">
-            {upcomingReviews.length} scheduled
-          </p>
-        </div>
-        {upcomingReviews.length > 0 ? (
-          <div className="mt-5 divide-y divide-ink-100 dark:divide-white/10">
-            {upcomingReviews.slice(0, 8).map((review) => (
-              <div
-                className="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_140px]"
-                key={review.id}
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
-                    {review.topicName}
-                  </p>
-                  <p className="mt-1 text-xs text-ink-500 dark:text-white/50">
-                    {review.moduleName} - Review {review.review_number}
-                  </p>
-                </div>
-                <p className="text-sm text-ink-600 dark:text-white/65">
-                  {formatDateLabel(review.due_date)}
-                </p>
+                        {isActionable ? (
+                          <div className="grid gap-3 sm:grid-cols-[100px_auto] sm:items-end">
+                            <label className="block">
+                              <span className="text-xs font-medium text-ink-500 dark:text-white/50">
+                                Score
+                              </span>
+                              <select
+                                className="mt-1 h-10 w-full rounded-lg border border-ink-200 px-3 text-sm outline-none focus:border-mint-500 dark:border-white/10"
+                                onChange={(event) =>
+                                  setScores((currentScores) => ({
+                                    ...currentScores,
+                                    [review.id]: Number(event.target.value),
+                                  }))
+                                }
+                                value={scores[review.id] ?? 3}
+                              >
+                                {scoreOptions.map((score) => (
+                                  <option key={score} value={score}>
+                                    {score}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                className="gap-2 px-3"
+                                disabled={learning.isMutating}
+                                onClick={() =>
+                                  handleReviewAction(review.id, "complete")
+                                }
+                              >
+                                <CheckCircle2
+                                  aria-hidden="true"
+                                  className="h-4 w-4"
+                                />
+                                Complete
+                              </Button>
+                              <Button
+                                className="px-3"
+                                disabled={learning.isMutating}
+                                onClick={() =>
+                                  handleReviewAction(review.id, "partial")
+                                }
+                                variant="secondary"
+                              >
+                                Partial
+                              </Button>
+                              <Button
+                                aria-label={`Mark ${review.topicName} review as missed`}
+                                className="gap-2 px-3"
+                                disabled={learning.isMutating}
+                                onClick={() =>
+                                  handleReviewAction(review.id, "missed")
+                                }
+                                variant="secondary"
+                              >
+                                <CircleSlash
+                                  aria-hidden="true"
+                                  className="h-4 w-4"
+                                />
+                                Missed
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-sm text-ink-500 dark:text-white/50">
+                            <RotateCcw
+                              aria-hidden="true"
+                              className="h-4 w-4"
+                            />
+                            {review.status === "scheduled"
+                              ? "Actions become available when this review is due."
+                              : "This review is part of your history."}
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleCard>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-5 rounded-lg border border-dashed border-ink-200 bg-ink-50 px-4 py-8 text-sm text-ink-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/55">
-            Upcoming reviews appear after topics are added.
-          </div>
-        )}
-      </section>
+            ) : searchQuery ? null : (
+              <EmptyState
+                message={group.emptyMessage}
+                title={`No ${group.title.toLowerCase()} items`}
+              />
+            )}
+          </section>
+        ))
+      )}
     </div>
   );
 }

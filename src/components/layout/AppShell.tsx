@@ -15,6 +15,7 @@ import { clsx } from "clsx";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/features/auth/useAuth";
+import { GlobalSearch } from "@/features/search/GlobalSearch";
 import { useTheme } from "@/features/theme/useTheme";
 
 type NavItem = {
@@ -115,9 +116,9 @@ export function AppShell() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-10 border-b border-ink-200/70 bg-white/85 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-ink-950/85 sm:px-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
+          <header className="sticky top-0 z-30 border-b border-ink-200/70 bg-white/90 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-ink-950/90 sm:px-6">
+            <div className="grid items-center gap-3 lg:grid-cols-[minmax(180px,0.7fr)_minmax(280px,1.5fr)_auto]">
+              <div className="min-w-0 pr-24 sm:pr-44 lg:pr-0">
                 <p className="text-xs font-medium uppercase text-ink-500 dark:text-white/45">
                   {formatToday()}
                 </p>
@@ -125,8 +126,9 @@ export function AppShell() {
                   {currentItem.label}
                 </h1>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="hidden max-w-48 truncate text-sm text-ink-500 dark:text-white/55 sm:inline">
+              <GlobalSearch />
+              <div className="absolute right-4 top-3 flex items-center gap-2 sm:right-6 lg:static lg:justify-end">
+                <span className="hidden max-w-48 truncate text-sm text-ink-500 dark:text-white/55 xl:inline">
                   {user?.email}
                 </span>
                 <button

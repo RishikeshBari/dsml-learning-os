@@ -14,7 +14,7 @@ type TopicWithModule = Topic & {
   moduleName: string;
 };
 
-type ReviewWithTopic = Review & {
+export type ReviewWithTopic = Review & {
   moduleName: string;
   topicBucket: BucketStatus;
   topicName: string;
@@ -133,7 +133,6 @@ export function useLearningEngine() {
             .from("reviews")
             .select("*")
             .eq("user_id", user.id)
-            .eq("status", "scheduled")
             .order("due_date", { ascending: true }),
           supabase
             .from("bucket_suggestions")

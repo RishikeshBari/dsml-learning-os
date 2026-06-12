@@ -26,3 +26,39 @@ select {
   font: inherit;
 }
 
+select {
+  background-color: #ffffff;
+  color: #020617;
+  color-scheme: light;
+}
+
+select option {
+  background-color: #ffffff;
+  color: #020617;
+}
+
+select option:checked {
+  background-color: #eef2f7;
+  color: #020617;
+}
+
+.dark select {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  color-scheme: dark;
+}
+
+.dark select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.dark select option:checked {
+  background-color: #334155;
+  color: #ffffff;
+}
+
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
