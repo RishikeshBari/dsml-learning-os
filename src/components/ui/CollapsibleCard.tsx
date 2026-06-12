@@ -7,6 +7,7 @@ type CollapsibleCardProps = {
   isExpanded: boolean;
   onToggle: () => void;
   summary: ReactNode;
+  variant?: "card" | "embedded";
 };
 
 export function CollapsibleCard({
@@ -14,12 +15,27 @@ export function CollapsibleCard({
   isExpanded,
   onToggle,
   summary,
+  variant = "card",
 }: CollapsibleCardProps) {
+  const isEmbedded = variant === "embedded";
+
   return (
-    <article className="overflow-hidden rounded-lg border border-ink-200 bg-white transition-colors dark:border-white/10 dark:bg-white/[0.025]">
+    <article
+      className={clsx(
+        "overflow-hidden transition-colors",
+        isEmbedded
+          ? "bg-transparent"
+          : "rounded-lg border border-ink-200 bg-white dark:border-white/10 dark:bg-white/[0.025]",
+      )}
+    >
       <button
         aria-expanded={isExpanded}
-        className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-ink-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mint-500 dark:hover:bg-white/[0.045]"
+        className={clsx(
+          "flex min-h-16 w-full items-center gap-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mint-500",
+          isEmbedded
+            ? "px-4 py-3 hover:bg-white/70 dark:hover:bg-white/[0.04]"
+            : "px-4 py-3 hover:bg-ink-50 dark:hover:bg-white/[0.045]",
+        )}
         onClick={onToggle}
         type="button"
       >
@@ -33,7 +49,14 @@ export function CollapsibleCard({
         />
       </button>
       {isExpanded ? (
-        <div className="border-t border-ink-100 px-4 py-4 dark:border-white/10">
+        <div
+          className={clsx(
+            "border-t px-4 py-4",
+            isEmbedded
+              ? "border-ink-200/70 bg-white/45 dark:border-white/10 dark:bg-black/10"
+              : "border-ink-100 dark:border-white/10",
+          )}
+        >
           {children}
         </div>
       ) : null}
