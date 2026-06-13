@@ -18,7 +18,6 @@ import {
   phaseStatuses,
   phaseStatusLabels,
   phaseStatusTone,
-  suggestedPhases,
 } from "@/features/projects/projectConfig";
 import type { ProjectWithDetails, useProjects } from "./useProjects";
 import type {
@@ -116,7 +115,6 @@ export function PhaseManager({ project, projects }: PhaseManagerProps) {
           <span className="sr-only">Phase title</span>
           <input
             className="h-10 w-full rounded-lg border border-ink-200 bg-white px-3 text-sm outline-none transition focus:border-mint-500 dark:border-white/10 dark:bg-white/5"
-            list={`phase-suggestions-${project.id}`}
             onChange={(event) =>
               setDraft((current) => ({
                 ...current,
@@ -126,11 +124,6 @@ export function PhaseManager({ project, projects }: PhaseManagerProps) {
             placeholder="Add a project phase"
             value={draft.title}
           />
-          <datalist id={`phase-suggestions-${project.id}`}>
-            {suggestedPhases.map((phase) => (
-              <option key={phase} value={phase} />
-            ))}
-          </datalist>
         </label>
         <label>
           <span className="sr-only">Phase priority</span>

@@ -17,6 +17,10 @@ export function SectionHeader({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="h-4 w-1 rounded-full bg-mint-500"
+          />
           <h2 className="text-sm font-semibold">{title}</h2>
           {count ? (
             <span className="text-xs text-ink-500 dark:text-white/45">

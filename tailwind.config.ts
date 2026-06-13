@@ -37,10 +37,12 @@ export default {
         ],
       },
       boxShadow: {
-        soft: "0 20px 60px rgba(15, 23, 42, 0.08)",
+        raised:
+          "0 1px 2px rgba(15, 23, 42, 0.06), 0 16px 36px rgba(15, 23, 42, 0.10)",
+        soft:
+          "0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.07)",
       },
     },
   },
   plugins: [],
 } satisfies Config;
-

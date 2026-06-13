@@ -52,21 +52,6 @@ export const phasePriorityLabels: Record<ProjectPhasePriority, string> = {
   medium: "Medium",
 };
 
-export const suggestedPhases = [
-  "Problem Understanding",
-  "Dataset Collection",
-  "Data Cleaning",
-  "EDA",
-  "Feature Engineering",
-  "Model Building",
-  "Model Evaluation",
-  "Dashboard / UI",
-  "Deployment",
-  "Documentation",
-  "GitHub README",
-  "Portfolio Case Study",
-];
-
 export function projectStatusTone(status: ProjectStatus) {
   if (status === "completed" || status === "deployed") {
     return "green" as const;

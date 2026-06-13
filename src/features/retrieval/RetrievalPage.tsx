@@ -138,11 +138,15 @@ function buildTopicGroups(
 function PromptEditor({
   activeSessionIsClosed,
   evaluationError,
+  isAiAnswerExpanded,
+  isAiEvaluationExpanded,
   isEvaluating,
   isMutating,
   onResponseChange,
   onSave,
   onScoreChange,
+  onToggleAiAnswer,
+  onToggleAiEvaluation,
   onUseAiScore,
   onApplyScore,
   prompt,
@@ -151,12 +155,16 @@ function PromptEditor({
 }: {
   activeSessionIsClosed: boolean;
   evaluationError: string;
+  isAiAnswerExpanded: boolean;
+  isAiEvaluationExpanded: boolean;
   isEvaluating: boolean;
   isMutating: boolean;
   onApplyScore: (score: number) => void;
   onResponseChange: (value: string) => void;
   onSave: () => void;
   onScoreChange: (score: number) => void;
+  onToggleAiAnswer: () => void;
+  onToggleAiEvaluation: () => void;
   onUseAiScore: () => void;
   prompt: PromptWithResponse;
   responseValue: string;
@@ -204,8 +212,12 @@ function PromptEditor({
       {savedResponse ? (
         <ResponseEvaluationPanel
           disabled={isMutating || activeSessionIsClosed}
+          isAnswerExpanded={isAiAnswerExpanded}
+          isEvaluationExpanded={isAiEvaluationExpanded}
           onApplyScore={onApplyScore}
           onScoreChange={onScoreChange}
+          onToggleAnswer={onToggleAiAnswer}
+          onToggleEvaluation={onToggleAiEvaluation}
           onUseAiScore={onUseAiScore}
           response={savedResponse}
           scoreValue={scoreValue}
@@ -249,6 +261,9 @@ export function RetrievalPage() {
   const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(
     new Set(),
   );
+  const [expandedAiSections, setExpandedAiSections] = useState<Set<string>>(
+    new Set(),
+  );
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
   const [evaluationErrors, setEvaluationErrors] = useState<
     Record<string, string>
@@ -276,6 +291,7 @@ export function RetrievalPage() {
 
   useEffect(() => {
     setExpandedTopicIds(new Set());
+    setExpandedAiSections(new Set());
   }, [activeSession?.id]);
 
   const topicGroups = useMemo(
@@ -294,6 +310,24 @@ export function RetrievalPage() {
 
     return [...groups.entries()];
   }, [topicGroups]);
+  const aiSectionKeys = useMemo(
+    () =>
+      topicGroups.flatMap((topicGroup) =>
+        topicGroup.prompts.flatMap((prompt) => {
+          if (
+            prompt.response?.ai_score === null ||
+            !prompt.response?.evaluated_at
+          ) {
+            return [];
+          }
+
+          return prompt.response.ai_corrected_answer
+            ? [`${prompt.id}:answer`, `${prompt.id}:evaluation`]
+            : [`${prompt.id}:evaluation`];
+        }),
+      ),
+    [topicGroups],
+  );
 
   async function handleCreateSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -383,6 +417,20 @@ export function RetrievalPage() {
         nextIds.delete(topicId);
       } else {
         nextIds.add(topicId);
+      }
+
+      return nextIds;
+    });
+  }
+
+  function toggleAiSection(sectionId: string) {
+    setExpandedAiSections((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(sectionId)) {
+        nextIds.delete(sectionId);
+      } else {
+        nextIds.add(sectionId);
       }
 
       return nextIds;
@@ -667,11 +715,12 @@ export function RetrievalPage() {
                 <Button
                   className="gap-2 px-3"
                   disabled={topicGroups.length === 0}
-                  onClick={() =>
+                  onClick={() => {
                     setExpandedTopicIds(
                       new Set(topicGroups.map((group) => group.key)),
-                    )
-                  }
+                    );
+                    setExpandedAiSections(new Set(aiSectionKeys));
+                  }}
                   variant="secondary"
                 >
                   <ChevronDown aria-hidden="true" className="h-4 w-4" />
@@ -679,8 +728,14 @@ export function RetrievalPage() {
                 </Button>
                 <Button
                   className="gap-2 px-3"
-                  disabled={expandedTopicIds.size === 0}
-                  onClick={() => setExpandedTopicIds(new Set())}
+                  disabled={
+                    expandedTopicIds.size === 0 &&
+                    expandedAiSections.size === 0
+                  }
+                  onClick={() => {
+                    setExpandedTopicIds(new Set());
+                    setExpandedAiSections(new Set());
+                  }}
                   variant="secondary"
                 >
                   <ChevronUp aria-hidden="true" className="h-4 w-4" />
@@ -762,6 +817,12 @@ export function RetrievalPage() {
                                   evaluationError={
                                     evaluationErrors[prompt.id] ?? ""
                                   }
+                                  isAiAnswerExpanded={expandedAiSections.has(
+                                    `${prompt.id}:answer`,
+                                  )}
+                                  isAiEvaluationExpanded={expandedAiSections.has(
+                                    `${prompt.id}:evaluation`,
+                                  )}
                                   isEvaluating={
                                     evaluatingPromptId === prompt.id
                                   }
@@ -790,6 +851,12 @@ export function RetrievalPage() {
                                       ...currentScores,
                                       [prompt.id]: score,
                                     }))
+                                  }
+                                  onToggleAiAnswer={() =>
+                                    toggleAiSection(`${prompt.id}:answer`)
+                                  }
+                                  onToggleAiEvaluation={() =>
+                                    toggleAiSection(`${prompt.id}:evaluation`)
                                   }
                                   onUseAiScore={() => {
                                     const aiScore = savedResponse?.ai_score;

@@ -1,5 +1,8 @@
-import { Clock3, TrendingUp } from "lucide-react";
-import { formatDuration } from "@/features/projects/projectConfig";
+import { Clock3, Flag, TrendingUp } from "lucide-react";
+import {
+  formatDuration,
+  formatProjectDate,
+} from "@/features/projects/projectConfig";
 import type {
   ProjectPhase,
   ProjectProgressSnapshot,
@@ -12,18 +15,39 @@ type ProjectChartsProps = {
   workLogs: ProjectWorkLog[];
 };
 
-function linePoints(values: number[], width: number, height: number) {
+function linePoints(
+  values: number[],
+  width: number,
+  height: number,
+  maximum = 100,
+) {
   if (values.length === 1) {
-    return `${width / 2},${height - (values[0] / 100) * height}`;
+    return `${width / 2},${height - (values[0] / maximum) * height}`;
   }
 
   return values
     .map((value, index) => {
       const x = (index / Math.max(values.length - 1, 1)) * width;
-      const y = height - (value / 100) * height;
+      const y = height - (value / maximum) * height;
       return `${x},${y}`;
     })
     .join(" ");
+}
+
+function sourceLabel(source: ProjectProgressSnapshot["source"]) {
+  if (source === "phase") {
+    return "Phase update";
+  }
+
+  if (source === "work_log") {
+    return "Work log";
+  }
+
+  if (source === "migration") {
+    return "Imported";
+  }
+
+  return "Manual update";
 }
 
 function ProgressChart({
@@ -36,9 +60,18 @@ function ProgressChart({
     (snapshot) => snapshot.progress_percentage,
   );
   const points = linePoints(values.length > 0 ? values : [0], 280, 96);
+  const milestones = visibleSnapshots
+    .filter(
+      (snapshot, index) =>
+        index === 0 ||
+        snapshot.progress_percentage !==
+          visibleSnapshots[index - 1].progress_percentage,
+    )
+    .slice(-3)
+    .reverse();
 
   return (
-    <div className="rounded-lg border border-ink-200/80 p-4 dark:border-white/10">
+    <div className="min-w-0">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <TrendingUp
@@ -77,63 +110,115 @@ function ProgressChart({
           strokeWidth="3"
           vectorEffect="non-scaling-stroke"
         />
+        {visibleSnapshots.map((snapshot, index) => {
+          const x =
+            visibleSnapshots.length === 1
+              ? 140
+              : (index / (visibleSnapshots.length - 1)) * 280;
+          const y =
+            96 - (snapshot.progress_percentage / 100) * 96;
+
+          return (
+            <circle
+              className="fill-white stroke-mint-500 dark:fill-ink-950"
+              cx={x}
+              cy={y}
+              key={snapshot.id}
+              r="3"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
       </svg>
+      {milestones.length > 0 ? (
+        <div className="mt-3 space-y-2 border-t border-ink-100 pt-3 dark:border-white/10">
+          {milestones.map((snapshot) => (
+            <div
+              className="flex items-center justify-between gap-3 text-xs"
+              key={snapshot.id}
+            >
+              <span className="flex min-w-0 items-center gap-2 text-ink-500 dark:text-white/50">
+                <Flag aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{sourceLabel(snapshot.source)}</span>
+              </span>
+              <span className="shrink-0 font-medium">
+                {snapshot.progress_percentage}% ·{" "}
+                {formatProjectDate(snapshot.recorded_at)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function TimeChart({ workLogs }: { workLogs: ProjectWorkLog[] }) {
-  const visibleLogs = [...workLogs].reverse().slice(-8);
-  const maxMinutes = Math.max(
-    ...visibleLogs.map((workLog) => workLog.time_spent_minutes),
-    1,
+function EffortChart({ workLogs }: { workLogs: ProjectWorkLog[] }) {
+  const sortedLogs = [...workLogs].sort((first, second) =>
+    first.log_date.localeCompare(second.log_date),
   );
+  let cumulativeMinutes = 0;
+  const effortPoints = sortedLogs
+    .map((workLog) => {
+      cumulativeMinutes += workLog.time_spent_minutes;
+
+      return { cumulativeMinutes, workLog };
+    })
+    .slice(-12);
+  const visibleLogs = effortPoints.map((point) => point.workLog);
+  const values = effortPoints.map((point) => point.cumulativeMinutes);
+  const maximum = Math.max(values.at(-1) ?? 0, 1);
+  const points = linePoints(values.length > 0 ? values : [0], 280, 96, maximum);
 
   return (
-    <div className="rounded-lg border border-ink-200/80 p-4 dark:border-white/10">
+    <div className="min-w-0 border-t border-ink-200/80 pt-5 dark:border-white/10 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Clock3 aria-hidden="true" className="h-4 w-4 text-signal-amber" />
-          <p className="text-sm font-semibold">Time spent</p>
+          <p className="text-sm font-semibold">Cumulative effort</p>
         </div>
         <span className="text-xs text-ink-500 dark:text-white/50">
-          Last {visibleLogs.length || 0} logs
+          {formatDuration(maximum)}
         </span>
       </div>
-      <div
-        aria-label="Time spent by work log"
-        className="mt-4 flex h-28 items-end gap-2"
+      <svg
+        aria-label="Cumulative project effort over time"
+        className="mt-4 h-28 w-full overflow-visible"
+        preserveAspectRatio="none"
         role="img"
+        viewBox="0 0 280 96"
       >
-        {visibleLogs.length > 0 ? (
-          visibleLogs.map((workLog) => (
-            <div
-              className="group flex min-w-0 flex-1 flex-col items-center justify-end gap-2"
-              key={workLog.id}
-              title={`${workLog.log_date}: ${formatDuration(
-                workLog.time_spent_minutes,
-              )}`}
-            >
-              <div
-                className="w-full max-w-8 rounded-t bg-signal-amber/70 transition group-hover:bg-signal-amber"
-                style={{
-                  height: `${Math.max(
-                    (workLog.time_spent_minutes / maxMinutes) * 82,
-                    8,
-                  )}px`,
-                }}
-              />
-              <span className="text-[10px] text-ink-400 dark:text-white/35">
-                {workLog.log_date.slice(5)}
-              </span>
-            </div>
-          ))
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-ink-500 dark:text-white/50">
-            Time appears after your first work log.
-          </div>
-        )}
-      </div>
+        {[0, 1, 2, 3].map((line) => (
+          <line
+            className="stroke-ink-100 dark:stroke-white/10"
+            key={line}
+            strokeWidth="1"
+            x1="0"
+            x2="280"
+            y1={line * 32}
+            y2={line * 32}
+          />
+        ))}
+        <polyline
+          className="fill-none stroke-signal-amber"
+          points={points}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="3"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      {visibleLogs.length > 0 ? (
+        <div className="mt-2 flex justify-between text-[10px] text-ink-400 dark:text-white/35">
+          <span>{formatProjectDate(visibleLogs[0].log_date)}</span>
+          <span>{formatProjectDate(visibleLogs.at(-1)?.log_date ?? null)}</span>
+        </div>
+      ) : (
+        <p className="mt-2 text-xs text-ink-500 dark:text-white/45">
+          Effort appears after your first work log.
+        </p>
+      )}
     </div>
   );
 }
@@ -163,7 +248,7 @@ function PhaseChart({ phases }: { phases: ProjectPhase[] }) {
   ];
 
   return (
-    <div className="rounded-lg border border-ink-200/80 p-4 dark:border-white/10 sm:col-span-2">
+    <div className="border-t border-ink-200/80 pt-5 dark:border-white/10 sm:col-span-2">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold">Phase completion</p>
         <span className="text-xs text-ink-500 dark:text-white/50">
@@ -195,6 +280,30 @@ function PhaseChart({ phases }: { phases: ProjectPhase[] }) {
           </div>
         ))}
       </div>
+      {phases.length > 0 ? (
+        <div className="mt-5 grid gap-x-5 gap-y-3 sm:grid-cols-2">
+          {phases.map((phase) => (
+            <div className="flex min-w-0 items-center gap-3" key={phase.id}>
+              <span
+                aria-hidden="true"
+                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                  phase.status === "completed"
+                    ? "bg-signal-green"
+                    : phase.status === "in_progress"
+                      ? "bg-signal-amber"
+                      : "bg-ink-200 dark:bg-white/15"
+                }`}
+              />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                {phase.title}
+              </span>
+              <span className="shrink-0 text-[10px] uppercase text-ink-400 dark:text-white/35">
+                {phase.status.replace("_", " ")}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -205,9 +314,9 @@ export function ProjectCharts({
   workLogs,
 }: ProjectChartsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-5 sm:grid-cols-2">
       <ProgressChart snapshots={snapshots} />
-      <TimeChart workLogs={workLogs} />
+      <EffortChart workLogs={workLogs} />
       <PhaseChart phases={phases} />
     </div>
   );

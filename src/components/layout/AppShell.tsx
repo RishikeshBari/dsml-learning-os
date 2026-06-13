@@ -58,9 +58,9 @@ export function AppShell() {
     navItems.find((item) => item.path === location.pathname) ?? navItems[0];
 
   return (
-    <div className="min-h-screen bg-ink-50 text-ink-950 dark:bg-ink-950 dark:text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
-        <aside className="hidden w-72 border-r border-ink-200/70 bg-white/80 px-5 py-6 backdrop-blur dark:border-white/10 dark:bg-white/[0.03] lg:block">
+    <div className="min-h-screen bg-ink-50 text-ink-950 dark:bg-ink-950 dark:text-white lg:h-screen lg:overflow-hidden">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1440px] lg:h-screen lg:min-h-0">
+        <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-ink-200/80 bg-white/80 px-5 py-6 backdrop-blur dark:border-white/15 dark:bg-white/[0.03] lg:block">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-950 text-sm font-semibold text-white dark:bg-white dark:text-ink-950">
               OS
@@ -115,7 +115,7 @@ export function AppShell() {
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col lg:h-screen lg:overflow-hidden">
           <header className="sticky top-0 z-30 border-b border-ink-200/70 bg-white/90 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-ink-950/90 sm:px-6">
             <div className="grid items-center gap-3 lg:grid-cols-[minmax(180px,0.7fr)_minmax(280px,1.5fr)_auto]">
               <div className="min-w-0 pr-24 sm:pr-44 lg:pr-0">
@@ -155,7 +155,7 @@ export function AppShell() {
               </div>
             </div>
           </header>
-          <main className="flex-1 px-4 py-6 pb-24 sm:px-6 lg:pb-8">
+          <main className="flex-1 px-4 py-6 pb-24 sm:px-6 lg:overflow-y-auto lg:py-8 lg:pb-8">
             <Outlet />
           </main>
         </div>

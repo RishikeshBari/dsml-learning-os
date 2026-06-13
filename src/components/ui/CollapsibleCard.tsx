@@ -22,10 +22,13 @@ export function CollapsibleCard({
   return (
     <article
       className={clsx(
-        "overflow-hidden transition-colors",
+        "overflow-hidden transition-[border-color,box-shadow,background-color]",
         isEmbedded
           ? "bg-transparent"
-          : "rounded-lg border border-ink-200 bg-white dark:border-white/10 dark:bg-white/[0.025]",
+          : "rounded-lg border border-ink-200/90 bg-white shadow-soft dark:border-white/15 dark:bg-white/[0.035]",
+        !isEmbedded &&
+          isExpanded &&
+          "border-ink-200 shadow-raised dark:border-white/20",
       )}
     >
       <button

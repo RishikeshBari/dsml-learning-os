@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
+import { MarkdownEditor } from "@/components/ui/MarkdownEditor";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PhaseManager } from "@/features/projects/PhaseManager";
 import { ProjectCharts } from "@/features/projects/ProjectCharts";
@@ -55,10 +56,10 @@ function ProjectSection({
 }: ProjectSectionProps) {
   return (
     <details
-      className="group border-b border-ink-100 last:border-b-0 dark:border-white/10"
+      className="group -mx-4 border-b border-ink-200/80 px-4 transition-colors open:bg-ink-50/65 last:border-b-0 dark:border-white/10 dark:open:bg-white/[0.025]"
       open={defaultOpen}
     >
-      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 py-3 transition hover:text-ink-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 dark:hover:text-white/80 [&::-webkit-details-marker]:hidden">
         <Icon
           aria-hidden="true"
           className="h-4 w-4 shrink-0 text-mint-500"
@@ -79,33 +80,20 @@ function ProjectSection({
   );
 }
 
-function workStreak(project: ProjectWithDetails) {
-  const dates = Array.from(
-    new Set(project.workLogs.map((workLog) => workLog.log_date)),
-  ).sort((first, second) => second.localeCompare(first));
-
-  if (dates.length === 0) {
+function averageWorkPerWeek(project: ProjectWithDetails) {
+  if (project.workLogs.length === 0) {
     return 0;
   }
 
-  let streak = 1;
-  let previous = new Date(`${dates[0]}T00:00:00`);
+  const dates = project.workLogs
+    .map((workLog) => new Date(`${workLog.log_date}T00:00:00`).getTime())
+    .sort((first, second) => first - second);
+  const elapsedWeeks = Math.max(
+    1,
+    Math.ceil((dates[dates.length - 1] - dates[0]) / 604_800_000) + 1,
+  );
 
-  for (const date of dates.slice(1)) {
-    const current = new Date(`${date}T00:00:00`);
-    const difference = Math.round(
-      (previous.getTime() - current.getTime()) / 86_400_000,
-    );
-
-    if (difference !== 1) {
-      break;
-    }
-
-    streak += 1;
-    previous = current;
-  }
-
-  return streak;
+  return Math.round(project.totalMinutes / elapsedWeeks);
 }
 
 export function ProjectCard({
@@ -157,7 +145,9 @@ export function ProjectCard({
       ),
     [moduleId, project.topicIds, topics],
   );
-  const streak = workStreak(project);
+  const averageWeeklyMinutes = averageWorkPerWeek(project);
+  const remainingPhaseCount =
+    project.phases.length - project.completedPhaseCount;
 
   async function saveOverview() {
     if (!name.trim()) {
@@ -409,10 +399,9 @@ export function ProjectCard({
         meta={`Last updated ${formatProjectTimestamp(project.notes_updated_at)}`}
         title="Notes & Ideas"
       >
-        <textarea
-          aria-label="Project notes and ideas"
-          className="min-h-56 w-full resize-y rounded-lg border border-ink-200 bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-mint-500 focus:ring-2 focus:ring-mint-500/15 dark:border-white/10 dark:bg-white/5"
-          onChange={(event) => setNotes(event.target.value)}
+        <MarkdownEditor
+          ariaLabel="Project notes and ideas"
+          onChange={setNotes}
           placeholder="Capture an improvement, bug, idea, approach, or anything you do not want to forget..."
           value={notes}
         />
@@ -437,20 +426,55 @@ export function ProjectCard({
       </ProjectSection>
 
       <ProjectSection icon={BarChart3} title="Progress insights">
-        <div className="grid gap-4 border-b border-ink-100 pb-5 sm:grid-cols-2 lg:grid-cols-4 dark:border-white/10">
-          {[
-            ["Progress", `${project.progress_percentage}%`],
-            ["Time spent", formatDuration(project.totalMinutes)],
-            ["Last worked", formatProjectDate(project.last_worked_on)],
-            ["Work streak", `${streak} day${streak === 1 ? "" : "s"}`],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <p className="text-xs text-ink-500 dark:text-white/45">
-                {label}
-              </p>
-              <p className="mt-1 text-lg font-semibold">{value}</p>
-            </div>
-          ))}
+        <div className="border-b border-ink-200/80 pb-5 dark:border-white/10">
+          <p className="text-xs font-semibold uppercase text-ink-500 dark:text-white/45">
+            Project overview
+          </p>
+          <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              ["Overall progress", `${project.progress_percentage}%`],
+              [
+                "Completed phases",
+                `${project.completedPhaseCount}/${project.phases.length}`,
+              ],
+              ["Remaining phases", `${remainingPhaseCount}`],
+              [
+                "Current phase",
+                project.currentPhase?.title ?? "No active phase",
+              ],
+              ["Last worked", formatProjectDate(project.last_worked_on)],
+            ].map(([label, value]) => (
+              <div className="min-w-0" key={label}>
+                <p className="text-xs text-ink-500 dark:text-white/45">
+                  {label}
+                </p>
+                <p className="mt-1 truncate text-base font-semibold" title={value}>
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-b border-ink-200/80 py-5 dark:border-white/10">
+          <p className="text-xs font-semibold uppercase text-ink-500 dark:text-white/45">
+            Activity summary
+          </p>
+          <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["Work sessions", `${project.workLogs.length}`],
+              ["Total time", formatDuration(project.totalMinutes)],
+              ["Last activity", formatProjectDate(project.last_worked_on)],
+              ["Average per week", formatDuration(averageWeeklyMinutes)],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <p className="text-xs text-ink-500 dark:text-white/45">
+                  {label}
+                </p>
+                <p className="mt-1 text-base font-semibold">{value}</p>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="mt-5">
           <ProjectCharts
