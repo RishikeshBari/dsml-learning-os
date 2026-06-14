@@ -228,6 +228,7 @@ export function useProjects() {
   };
 
   const createProject = useMutation({
+    meta: { successMessage: "Project created successfully" },
     mutationFn: async (values: ProjectInput) => {
       if (!user) {
         throw new Error("You need to be signed in to create a project.");
@@ -250,6 +251,7 @@ export function useProjects() {
   });
 
   const updateProject = useMutation({
+    meta: { successMessage: "Project updated successfully" },
     mutationFn: async (values: ProjectUpdate) => {
       const updates: Database["public"]["Tables"]["projects"]["Update"] = {};
 
@@ -288,6 +290,7 @@ export function useProjects() {
   });
 
   const saveNotes = useMutation({
+    meta: { successMessage: "Notes saved successfully" },
     mutationFn: async ({
       notes,
       projectId,
@@ -311,6 +314,7 @@ export function useProjects() {
   });
 
   const deleteProject = useMutation({
+    meta: { successMessage: "Project deleted successfully" },
     mutationFn: async (projectId: string) => {
       const { error } = await supabase
         .from("projects")
@@ -325,6 +329,7 @@ export function useProjects() {
   });
 
   const createPhase = useMutation({
+    meta: { successMessage: "Phase added successfully" },
     mutationFn: async (values: PhaseInput) => {
       if (!user) {
         throw new Error("You need to be signed in to add a phase.");
@@ -351,6 +356,7 @@ export function useProjects() {
   });
 
   const updatePhase = useMutation({
+    meta: { successMessage: "Phase updated successfully" },
     mutationFn: async (values: PhaseUpdate) => {
       const { error } = await supabase
         .from("project_phases")
@@ -373,6 +379,7 @@ export function useProjects() {
   });
 
   const deletePhase = useMutation({
+    meta: { successMessage: "Phase deleted successfully" },
     mutationFn: async (phaseId: string) => {
       const { error } = await supabase
         .from("project_phases")
@@ -387,6 +394,7 @@ export function useProjects() {
   });
 
   const reorderPhase = useMutation({
+    meta: { successMessage: "Phase order updated successfully" },
     mutationFn: async ({
       direction,
       phaseId,
@@ -431,6 +439,7 @@ export function useProjects() {
   });
 
   const createWorkLog = useMutation({
+    meta: { successMessage: "Work log saved successfully" },
     mutationFn: async (values: WorkLogInput) => {
       if (!user) {
         throw new Error("You need to be signed in to add a work log.");
@@ -455,6 +464,7 @@ export function useProjects() {
   });
 
   const updateWorkLog = useMutation({
+    meta: { successMessage: "Work log updated successfully" },
     mutationFn: async (values: WorkLogUpdate) => {
       const { error } = await supabase
         .from("project_work_logs")
@@ -476,6 +486,7 @@ export function useProjects() {
   });
 
   const deleteWorkLog = useMutation({
+    meta: { successMessage: "Work log deleted successfully" },
     mutationFn: async (workLogId: string) => {
       const { error } = await supabase
         .from("project_work_logs")
@@ -490,6 +501,7 @@ export function useProjects() {
   });
 
   const toggleProjectTopic = useMutation({
+    meta: { successMessage: "Project topics updated successfully" },
     mutationFn: async ({
       isLinked,
       projectId,

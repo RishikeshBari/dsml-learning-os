@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertCircle,
+  ArrowUpRight,
   BarChart3,
   BookOpenCheck,
   CalendarClock,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useProfile } from "@/features/auth/useProfile";
 import { useDashboardData } from "@/features/dashboard/useDashboardData";
 import type { BucketStatus, ClassSchedule } from "@/types/database";
@@ -21,6 +23,7 @@ type MetricCardProps = {
   icon: typeof Activity;
   label: string;
   tone?: "default" | "green" | "red" | "amber";
+  to: string;
   value: string;
 };
 
@@ -89,6 +92,7 @@ function MetricCard({
   icon: Icon,
   label,
   tone = "default",
+  to,
   value,
 }: MetricCardProps) {
   const toneClass = {
@@ -99,18 +103,28 @@ function MetricCard({
   }[tone];
 
   return (
-    <article className="rounded-lg border border-ink-200 bg-white p-4 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
+    <Link
+      aria-label={`Open ${label}`}
+      className="group rounded-lg border border-ink-200 bg-white p-4 shadow-soft transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-white/20"
+      to={to}
+    >
       <div className="flex items-center justify-between gap-4">
         <div className={`rounded-lg p-2 ${toneClass}`}>
           <Icon aria-hidden="true" className="h-5 w-5" />
         </div>
-        <p className="text-2xl font-semibold">{value}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-2xl font-semibold">{value}</p>
+          <ArrowUpRight
+            aria-hidden="true"
+            className="h-4 w-4 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-ink-500 dark:text-white/25 dark:group-hover:text-white/55"
+          />
+        </div>
       </div>
       <h3 className="mt-4 text-sm font-semibold">{label}</h3>
       <p className="mt-1 text-sm leading-6 text-ink-500 dark:text-white/55">
         {detail}
       </p>
-    </article>
+    </Link>
   );
 }
 
@@ -118,21 +132,31 @@ function DashboardCard({
   children,
   title,
   icon: Icon,
+  to,
 }: {
   children: ReactNode;
   icon: typeof Activity;
   title: string;
+  to: string;
 }) {
   return (
-    <section className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
+    <Link
+      aria-label={`Open ${title}`}
+      className="group rounded-lg border border-ink-200 bg-white p-5 shadow-soft transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-white/20"
+      to={to}
+    >
       <div className="flex items-center gap-3">
         <div className="rounded-lg bg-ink-100 p-2 text-ink-700 dark:bg-white/10 dark:text-white">
           <Icon aria-hidden="true" className="h-5 w-5" />
         </div>
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="min-w-0 flex-1 text-sm font-semibold">{title}</h2>
+        <ArrowUpRight
+          aria-hidden="true"
+          className="h-4 w-4 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-ink-500 dark:text-white/25 dark:group-hover:text-white/55"
+        />
       </div>
       <div className="mt-5">{children}</div>
-    </section>
+    </Link>
   );
 }
 
@@ -217,15 +241,25 @@ export function TodayPage() {
           </p>
         </div>
 
-        <div className="rounded-lg border border-ink-200 bg-white p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.04]">
+        <Link
+          aria-label="Open learning analytics"
+          className="group rounded-lg border border-ink-200 bg-white p-5 shadow-soft transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-mint-500 dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-white/20"
+          to="/analytics"
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-ink-500 dark:text-white/60">
               Learning health
             </p>
-            <Activity
-              aria-hidden="true"
-              className="h-5 w-5 text-mint-500 dark:text-mint-400"
-            />
+            <div className="flex items-center gap-2">
+              <Activity
+                aria-hidden="true"
+                className="h-5 w-5 text-mint-500 dark:text-mint-400"
+              />
+              <ArrowUpRight
+                aria-hidden="true"
+                className="h-4 w-4 text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-ink-500 dark:text-white/25 dark:group-hover:text-white/55"
+              />
+            </div>
           </div>
           <p className="mt-5 text-5xl font-semibold text-ink-950 dark:text-white">
             {healthScore}
@@ -236,7 +270,7 @@ export function TodayPage() {
               style={{ width: `${healthScore}%` }}
             />
           </div>
-        </div>
+        </Link>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -244,6 +278,7 @@ export function TodayPage() {
           detail="Modules currently available in your learning map."
           icon={Layers3}
           label="Modules"
+          to="/topics"
           value={String(dashboard.moduleCount)}
         />
         <MetricCard
@@ -251,6 +286,7 @@ export function TodayPage() {
           icon={CalendarClock}
           label="Due reviews"
           tone={dashboard.dueReviewCount > 0 ? "amber" : "green"}
+          to="/revisions"
           value={String(dashboard.dueReviewCount)}
         />
         <MetricCard
@@ -258,6 +294,7 @@ export function TodayPage() {
           icon={Target}
           label="Weak areas"
           tone={dashboard.weakTopicCount > 0 ? "red" : "green"}
+          to="/topics"
           value={String(dashboard.weakTopicCount)}
         />
         <MetricCard
@@ -265,12 +302,17 @@ export function TodayPage() {
           icon={CheckCircle2}
           label="Weekly review"
           tone="green"
+          to="/analytics"
           value={`${weeklyPercent}%`}
         />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <DashboardCard icon={BookOpenCheck} title="Due Revisions">
+        <DashboardCard
+          icon={BookOpenCheck}
+          title="Due Revisions"
+          to="/revisions"
+        >
           {dashboard.dueReviews.length > 0 ? (
             <div className="space-y-3">
               {dashboard.dueReviews.map((review) => (
@@ -298,7 +340,11 @@ export function TodayPage() {
           )}
         </DashboardCard>
 
-        <DashboardCard icon={BarChart3} title="R/S/G Distribution">
+        <DashboardCard
+          icon={BarChart3}
+          title="R/S/G Distribution"
+          to="/topics"
+        >
           {dashboard.topicCount > 0 ? (
             <div className="space-y-4">
               <div className="flex h-3 overflow-hidden rounded-full bg-ink-100 dark:bg-white/10">
@@ -334,7 +380,7 @@ export function TodayPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-3">
-        <DashboardCard icon={Clock3} title="Upcoming Class">
+        <DashboardCard icon={Clock3} title="Upcoming Class" to="/topics">
           {dashboard.nextClass ? (
             <div>
               <p className="text-2xl font-semibold">
@@ -350,7 +396,7 @@ export function TodayPage() {
           )}
         </DashboardCard>
 
-        <DashboardCard icon={Activity} title="Weekly Progress">
+        <DashboardCard icon={Activity} title="Weekly Progress" to="/analytics">
           <div className="space-y-4">
             <div className="flex items-end justify-between">
               <p className="text-2xl font-semibold">{weeklyPercent}%</p>
@@ -367,7 +413,7 @@ export function TodayPage() {
           </div>
         </DashboardCard>
 
-        <DashboardCard icon={FolderGit2} title="Projects">
+        <DashboardCard icon={FolderGit2} title="Projects" to="/projects">
           <div className="space-y-4">
             <div className="flex items-end justify-between gap-4">
               <div>
@@ -401,7 +447,11 @@ export function TodayPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <DashboardCard icon={CalendarClock} title="Retrieval Session">
+        <DashboardCard
+          icon={CalendarClock}
+          title="Retrieval Session"
+          to="/retrieval"
+        >
           {dashboard.nextRetrievalSession ? (
             <div>
               <p className="text-2xl font-semibold">
@@ -416,7 +466,11 @@ export function TodayPage() {
           )}
         </DashboardCard>
 
-        <DashboardCard icon={AlertCircle} title="Empty State Readiness">
+        <DashboardCard
+          icon={AlertCircle}
+          title="Empty State Readiness"
+          to="/topics"
+        >
           <div className="grid gap-3 sm:grid-cols-3">
             {[
               ["Topics", dashboard.topicCount],

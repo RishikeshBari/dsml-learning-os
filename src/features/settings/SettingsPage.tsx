@@ -2,6 +2,7 @@ import { CheckCircle2, KeyRound, Trash2, Zap } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/toastContext";
 import {
   generateGeminiText,
   getGeminiModelName,
@@ -13,6 +14,7 @@ import {
 } from "@/features/gemini/geminiStorage";
 
 export function SettingsPage() {
+  const { showSuccess } = useToast();
   const [apiKey, setApiKey] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -32,6 +34,7 @@ export function SettingsPage() {
     setIsSaved(Boolean(apiKey.trim()));
     setTestResult("");
     setError("");
+    showSuccess("Gemini API key saved successfully");
   }
 
   function handleClear() {
@@ -40,6 +43,7 @@ export function SettingsPage() {
     setIsSaved(false);
     setTestResult("");
     setError("");
+    showSuccess("Gemini API key removed");
   }
 
   async function handleTest() {
@@ -64,6 +68,7 @@ export function SettingsPage() {
       });
 
       setTestResult(result);
+      showSuccess("Gemini connection tested successfully");
     } catch (testError) {
       setError(
         testError instanceof Error

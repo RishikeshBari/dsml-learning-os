@@ -424,6 +424,7 @@ export function useRetrievalEngine() {
   };
 
   const createSession = useMutation({
+    meta: { successMessage: "Retrieval session created successfully" },
     mutationFn: async (values: CreateSessionInput) => {
       if (!user) {
         throw new Error("You need to be signed in to create retrieval sessions.");
@@ -489,6 +490,7 @@ export function useRetrievalEngine() {
   });
 
   const updateSessionStatus = useMutation({
+    meta: { successMessage: "Retrieval session updated successfully" },
     mutationFn: async ({
       sessionId,
       status,
@@ -512,6 +514,7 @@ export function useRetrievalEngine() {
   });
 
   const deleteSession = useMutation({
+    meta: { successMessage: "Retrieval session deleted successfully" },
     mutationFn: async (sessionId: string) => {
       const { error } = await supabase
         .from("retrieval_sessions")
@@ -526,6 +529,7 @@ export function useRetrievalEngine() {
   });
 
   const saveResponse = useMutation<SaveResponseResult, Error, SaveResponseInput>({
+    meta: { successMessage: "Response saved successfully" },
     mutationFn: async (values) => {
       if (!user) {
         throw new Error("You need to be signed in to save retrieval responses.");
@@ -645,6 +649,7 @@ export function useRetrievalEngine() {
   });
 
   const updateResponseScore = useMutation({
+    meta: { successMessage: "Evaluation score saved successfully" },
     mutationFn: async (values: UpdateResponseScoreInput) => {
       const { error } = await supabase
         .from("retrieval_responses")
@@ -662,6 +667,7 @@ export function useRetrievalEngine() {
   });
 
   const generateGeminiPrompts = useMutation({
+    meta: { successMessage: "Gemini questions generated successfully" },
     mutationFn: async (values: GenerateGeminiPromptsInput) => {
       if (!user) {
         throw new Error("You need to be signed in to generate Gemini prompts.");

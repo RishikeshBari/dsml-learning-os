@@ -14,9 +14,27 @@
   color-scheme: dark;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html,
+body {
+  background: #f8fafc;
+}
+
+.dark,
+.dark body {
+  background: #020617;
+}
+
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
 }
 
 button,

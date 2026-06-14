@@ -198,6 +198,7 @@ export function useLearningEngine() {
   };
 
   const createModule = useMutation({
+    meta: { successMessage: "Module created successfully" },
     mutationFn: async (values: { description?: string; name: string }) => {
       if (!user) {
         throw new Error("You need to be signed in to create a module.");
@@ -217,6 +218,7 @@ export function useLearningEngine() {
   });
 
   const createTopic = useMutation({
+    meta: { successMessage: "Topic created successfully" },
     mutationFn: async (values: TopicInput) => {
       if (!user) {
         throw new Error("You need to be signed in to create a topic.");
@@ -239,6 +241,7 @@ export function useLearningEngine() {
   });
 
   const updateTopicBucket = useMutation({
+    meta: { successMessage: "Topic status updated successfully" },
     mutationFn: async ({
       bucket,
       topicId,
@@ -259,6 +262,7 @@ export function useLearningEngine() {
   });
 
   const archiveTopic = useMutation({
+    meta: { successMessage: "Topic archived successfully" },
     mutationFn: async (topicId: string) => {
       const { error } = await supabase
         .from("topics")
@@ -273,6 +277,7 @@ export function useLearningEngine() {
   });
 
   const deleteModule = useMutation({
+    meta: { successMessage: "Module deleted successfully" },
     mutationFn: async (moduleId: string) => {
       const { error } = await supabase
         .from("modules")
@@ -287,6 +292,7 @@ export function useLearningEngine() {
   });
 
   const deleteTopic = useMutation({
+    meta: { successMessage: "Topic deleted successfully" },
     mutationFn: async (topicId: string) => {
       const { error } = await supabase
         .from("topics")
@@ -301,6 +307,7 @@ export function useLearningEngine() {
   });
 
   const completeReview = useMutation({
+    meta: { successMessage: "Revision updated successfully" },
     mutationFn: async (values: ReviewActionInput) => {
       if (!user) {
         throw new Error("You need to be signed in to complete a review.");
@@ -382,6 +389,7 @@ export function useLearningEngine() {
   });
 
   const acceptSuggestion = useMutation({
+    meta: { successMessage: "Bucket suggestion applied successfully" },
     mutationFn: async (suggestion: BucketSuggestion) => {
       const [topicResult, suggestionResult] = await Promise.all([
         supabase
@@ -409,6 +417,7 @@ export function useLearningEngine() {
   });
 
   const rejectSuggestion = useMutation({
+    meta: { successMessage: "Bucket suggestion dismissed" },
     mutationFn: async (suggestionId: string) => {
       const { error } = await supabase
         .from("bucket_suggestions")
