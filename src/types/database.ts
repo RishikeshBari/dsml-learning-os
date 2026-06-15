@@ -36,6 +36,40 @@ export type ProjectProgressSource =
   | "migration";
 export type PromptSource = "system" | "gemini";
 export type PromptType = "conceptual" | "interview" | "practical" | "coding";
+export type InterviewModuleStatus =
+  | "not_started"
+  | "weak"
+  | "improving"
+  | "interview_ready";
+export type InterviewDifficulty = "easy" | "medium" | "hard";
+export type InterviewQuestionType =
+  | "conceptual"
+  | "coding"
+  | "scenario_based"
+  | "debugging"
+  | "project_based"
+  | "resume_based"
+  | "hr_behavioral";
+export type InterviewQualityLabel =
+  | "too_vague"
+  | "too_theoretical"
+  | "good_but_incomplete"
+  | "interview_ready"
+  | "needs_example"
+  | "needs_code_clarity"
+  | "conceptually_weak"
+  | "strong_answer";
+export type InterviewSessionType =
+  | "normal"
+  | "weak_drill"
+  | "mock"
+  | "project_defense"
+  | "resume_based"
+  | "last_7_days";
+export type InterviewSessionStatus =
+  | "planned"
+  | "in_progress"
+  | "completed";
 export type RetrievalStatus = "planned" | "in_progress" | "complete" | "missed";
 export type ReviewStatus = "scheduled" | "complete" | "partial" | "missed";
 export type ThemePreference = "light" | "dark" | "system";
@@ -613,6 +647,339 @@ export type Database = {
         };
         Relationships: [];
       };
+      interview_modules: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          readiness_score: number;
+          status: InterviewModuleStatus;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          readiness_score?: number;
+          status?: InterviewModuleStatus;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          readiness_score?: number;
+          status?: InterviewModuleStatus;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      interview_topics: {
+        Row: {
+          created_at: string;
+          id: string;
+          last_practiced_at: string | null;
+          learning_topic_id: string | null;
+          module_id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+          weakness_score: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          last_practiced_at?: string | null;
+          learning_topic_id?: string | null;
+          module_id: string;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+          weakness_score?: number;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          last_practiced_at?: string | null;
+          learning_topic_id?: string | null;
+          module_id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+          weakness_score?: number;
+        };
+        Relationships: [];
+      };
+      interview_questions: {
+        Row: {
+          answer_notes: string | null;
+          code_snippet: string | null;
+          context_source: string | null;
+          created_at: string;
+          difficulty: number | null;
+          difficulty_label: InterviewDifficulty | null;
+          expected_skills: string[];
+          id: string;
+          interview_module_id: string | null;
+          interview_topic_id: string | null;
+          item_type: "conceptual" | "technical" | "coding" | "behavioral";
+          question: string;
+          question_type: InterviewQuestionType | null;
+          source: PromptSource;
+          suggested_time_minutes: number | null;
+          topic_id: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          answer_notes?: string | null;
+          code_snippet?: string | null;
+          context_source?: string | null;
+          created_at?: string;
+          difficulty?: number | null;
+          difficulty_label?: InterviewDifficulty | null;
+          expected_skills?: string[];
+          id?: string;
+          interview_module_id?: string | null;
+          interview_topic_id?: string | null;
+          item_type?: "conceptual" | "technical" | "coding" | "behavioral";
+          question: string;
+          question_type?: InterviewQuestionType | null;
+          source?: PromptSource;
+          suggested_time_minutes?: number | null;
+          topic_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          answer_notes?: string | null;
+          code_snippet?: string | null;
+          context_source?: string | null;
+          created_at?: string;
+          difficulty?: number | null;
+          difficulty_label?: InterviewDifficulty | null;
+          expected_skills?: string[];
+          id?: string;
+          interview_module_id?: string | null;
+          interview_topic_id?: string | null;
+          item_type?: "conceptual" | "technical" | "coding" | "behavioral";
+          question?: string;
+          question_type?: InterviewQuestionType | null;
+          source?: PromptSource;
+          suggested_time_minutes?: number | null;
+          topic_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      interview_attempts: {
+        Row: {
+          ai_score: number | null;
+          answer_quality_label: InterviewQualityLabel | null;
+          attempted_at: string;
+          attempt_number: number;
+          confidence: AiConfidence | null;
+          evaluated_at: string | null;
+          id: string;
+          improvement_delta: number | null;
+          interview_question_id: string;
+          is_draft: boolean;
+          notes: string | null;
+          score: number | null;
+          updated_at: string;
+          user_answer: string | null;
+          user_id: string;
+        };
+        Insert: {
+          ai_score?: number | null;
+          answer_quality_label?: InterviewQualityLabel | null;
+          attempted_at?: string;
+          attempt_number?: number;
+          confidence?: AiConfidence | null;
+          evaluated_at?: string | null;
+          id?: string;
+          improvement_delta?: number | null;
+          interview_question_id: string;
+          is_draft?: boolean;
+          notes?: string | null;
+          score?: number | null;
+          updated_at?: string;
+          user_answer?: string | null;
+          user_id: string;
+        };
+        Update: {
+          ai_score?: number | null;
+          answer_quality_label?: InterviewQualityLabel | null;
+          attempted_at?: string;
+          attempt_number?: number;
+          confidence?: AiConfidence | null;
+          evaluated_at?: string | null;
+          id?: string;
+          improvement_delta?: number | null;
+          interview_question_id?: string;
+          is_draft?: boolean;
+          notes?: string | null;
+          score?: number | null;
+          updated_at?: string;
+          user_answer?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      interview_feedback: {
+        Row: {
+          attempt_id: string;
+          code_snippet: string | null;
+          common_mistakes: string[];
+          correct_points: string[];
+          created_at: string;
+          example: string | null;
+          follow_up_questions: string[];
+          id: string;
+          ideal_answer: string | null;
+          improvement_tips: string[];
+          interview_friendly_answer: string | null;
+          mistakes: string[];
+          missing_points: string[];
+          natural_speaking_tip: string | null;
+          quick_revision_summary: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          attempt_id: string;
+          code_snippet?: string | null;
+          common_mistakes?: string[];
+          correct_points?: string[];
+          created_at?: string;
+          example?: string | null;
+          follow_up_questions?: string[];
+          id?: string;
+          ideal_answer?: string | null;
+          improvement_tips?: string[];
+          interview_friendly_answer?: string | null;
+          mistakes?: string[];
+          missing_points?: string[];
+          natural_speaking_tip?: string | null;
+          quick_revision_summary?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          attempt_id?: string;
+          code_snippet?: string | null;
+          common_mistakes?: string[];
+          correct_points?: string[];
+          created_at?: string;
+          example?: string | null;
+          follow_up_questions?: string[];
+          id?: string;
+          ideal_answer?: string | null;
+          improvement_tips?: string[];
+          interview_friendly_answer?: string | null;
+          mistakes?: string[];
+          missing_points?: string[];
+          natural_speaking_tip?: string | null;
+          quick_revision_summary?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      interview_sessions: {
+        Row: {
+          average_score: number | null;
+          completed_at: string | null;
+          created_at: string;
+          current_question_index: number;
+          details: Json;
+          id: string;
+          module_id: string | null;
+          question_ids: string[];
+          recommendations: string[];
+          session_type: InterviewSessionType;
+          started_at: string | null;
+          status: InterviewSessionStatus;
+          strong_areas: string[];
+          summary: string | null;
+          updated_at: string;
+          user_id: string;
+          weak_areas: string[];
+        };
+        Insert: {
+          average_score?: number | null;
+          completed_at?: string | null;
+          created_at?: string;
+          current_question_index?: number;
+          details?: Json;
+          id?: string;
+          module_id?: string | null;
+          question_ids?: string[];
+          recommendations?: string[];
+          session_type: InterviewSessionType;
+          started_at?: string | null;
+          status?: InterviewSessionStatus;
+          strong_areas?: string[];
+          summary?: string | null;
+          updated_at?: string;
+          user_id: string;
+          weak_areas?: string[];
+        };
+        Update: {
+          average_score?: number | null;
+          completed_at?: string | null;
+          created_at?: string;
+          current_question_index?: number;
+          details?: Json;
+          id?: string;
+          module_id?: string | null;
+          question_ids?: string[];
+          recommendations?: string[];
+          session_type?: InterviewSessionType;
+          started_at?: string | null;
+          status?: InterviewSessionStatus;
+          strong_areas?: string[];
+          summary?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          weak_areas?: string[];
+        };
+        Relationships: [];
+      };
+      interview_revision_notes: {
+        Row: {
+          created_at: string;
+          id: string;
+          module_id: string;
+          revision_note: Json;
+          topic_id: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          module_id: string;
+          revision_note?: Json;
+          topic_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          module_id?: string;
+          revision_note?: Json;
+          topic_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       mastery_snapshots: {
         Row: {
           coding_score: number;
@@ -733,6 +1100,20 @@ export type ProjectWorkLog =
   Database["public"]["Tables"]["project_work_logs"]["Row"];
 export type ProjectProgressSnapshot =
   Database["public"]["Tables"]["project_progress_snapshots"]["Row"];
+export type InterviewModule =
+  Database["public"]["Tables"]["interview_modules"]["Row"];
+export type InterviewTopic =
+  Database["public"]["Tables"]["interview_topics"]["Row"];
+export type InterviewQuestion =
+  Database["public"]["Tables"]["interview_questions"]["Row"];
+export type InterviewAttempt =
+  Database["public"]["Tables"]["interview_attempts"]["Row"];
+export type InterviewFeedback =
+  Database["public"]["Tables"]["interview_feedback"]["Row"];
+export type InterviewSession =
+  Database["public"]["Tables"]["interview_sessions"]["Row"];
+export type InterviewRevisionNote =
+  Database["public"]["Tables"]["interview_revision_notes"]["Row"];
 export type MasterySnapshot =
   Database["public"]["Tables"]["mastery_snapshots"]["Row"];
 export type BucketSuggestion =

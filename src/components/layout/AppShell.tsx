@@ -6,6 +6,7 @@ import {
   FolderGit2,
   LogOut,
   Moon,
+  MessageSquareText,
   RotateCcw,
   Settings,
   Sun,
@@ -35,12 +36,18 @@ const navItems: NavItem[] = [
   { icon: BookOpenCheck, label: "Topics", path: "/topics" },
   { icon: RotateCcw, label: "Revisions", path: "/revisions" },
   { icon: Brain, label: "Retrieval", path: "/retrieval" },
+  {
+    icon: MessageSquareText,
+    label: "Interview Prep",
+    path: "/interview-prep",
+    shortLabel: "Interview",
+  },
   { icon: FolderGit2, label: "Projects", path: "/projects" },
   { icon: BarChart3, label: "Analytics", path: "/analytics" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
-const mobileNavItems = navItems.slice(0, 5);
+const mobileNavItems = navItems.slice(0, 6);
 
 function formatToday() {
   return new Intl.DateTimeFormat(undefined, {
@@ -152,7 +159,7 @@ export function AppShell() {
         </div>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-ink-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-white/10 dark:bg-ink-950/95 lg:hidden">
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-xl grid-cols-6 gap-1">
           {mobileNavItems.map((item) =>
             item.path ? (
               <NavLink

@@ -9,6 +9,7 @@ import { RevisionsPage } from "@/features/revisions/RevisionsPage";
 import { RetrievalPage } from "@/features/retrieval/RetrievalPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { TopicsPage } from "@/features/topics/TopicsPage";
+import { InterviewPrepPage } from "@/features/interview/InterviewPrepPage";
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
         <Route path="topics" element={<TopicsPage />} />
         <Route path="revisions" element={<RevisionsPage />} />
         <Route path="retrieval" element={<RetrievalPage />} />
+        <Route path="interview-prep" element={<InterviewPrepPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="settings" element={<SettingsPage />} />

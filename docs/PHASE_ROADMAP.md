@@ -251,3 +251,16 @@ Ready-to-use steps:
 4. Deploy to GitHub Pages.
 5. Install on mobile.
 6. Verify auth, data sync, and core flows.
+
+## Interview Prep Extension
+
+Goal: Turn existing learning, retrieval, and project context into focused
+placement practice.
+
+Status: Implemented with a dedicated route, structured Gemini generation and
+evaluation, re-attempt history, revision recaps, mock interviews, resume and
+project-defense modes, readiness scoring, and secure Supabase persistence.
+
+Implementation details:
+
+- See `docs/phases/interview-prep.md`.
