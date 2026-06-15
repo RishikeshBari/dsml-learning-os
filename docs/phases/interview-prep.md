@@ -33,6 +33,10 @@ Module library synchronization:
 
 `supabase/migrations/20260615143118_sync_interview_modules_library.sql`
 
+History-preserving module deletion:
+
+`supabase/migrations/20260615154230_preserve_interview_history_on_module_delete.sql`
+
 New tables:
 
 - `interview_modules`
@@ -53,6 +57,8 @@ Interview Prep does not maintain a separate predefined learning-module list.
 On load, each active Modules Library item is linked to an interview module.
 Existing interview modules with matching names are reused, and missing links
 are created without deleting historical questions or attempts.
+Deleting a Modules Library item detaches its Interview Prep link while
+preserving prior questions, answers, and evaluations.
 
 Project and resume question categories remain internal Interview Prep modules
 because they are contextual practice modes rather than learning-library
