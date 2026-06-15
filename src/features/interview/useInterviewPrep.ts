@@ -239,7 +239,14 @@ export function useInterviewPrep() {
         throw errors[0];
       }
 
-      const modules = (moduleRows ?? []) as InterviewModule[];
+      const moduleOrder = new Map<string, number>(
+        interviewModuleNames.map((name, index) => [name, index]),
+      );
+      const modules = ([...(moduleRows ?? [])] as InterviewModule[]).sort(
+        (first, second) =>
+          (moduleOrder.get(first.name) ?? Number.MAX_SAFE_INTEGER) -
+          (moduleOrder.get(second.name) ?? Number.MAX_SAFE_INTEGER),
+      );
       const topics = (topicsResult.data ?? []) as InterviewTopic[];
       const questions = (questionsResult.data ?? []) as InterviewQuestion[];
       const attempts = (attemptsResult.data ?? []) as InterviewAttempt[];
