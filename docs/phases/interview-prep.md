@@ -9,8 +9,10 @@ Implemented as an extension of the existing DS/ML Learning OS.
 - Dedicated `/interview-prep` route and main navigation item.
 - Dashboard, Modules, Practice, Mock Interview, Resume / Project Questions,
   and History views.
-- Canonical interview modules for Python, SQL, Statistics, Machine Learning,
-  Deep Learning, Projects, Resume, and HR / Behavioral practice.
+- Interview modules synchronized from each user's active Modules Library.
+- Module-specific topic suggestions sourced from the selected learning module.
+- Question bank grouped into collapsible module sections.
+- Full question text shown whenever a question card is expanded.
 - Gemini question generation with structured JSON output.
 - Secure answer evaluation through the authenticated `interview-ai` Supabase
   Edge Function.
@@ -27,6 +29,10 @@ Migration:
 
 `supabase/migrations/20260615132942_extend_interview_prep.sql`
 
+Module library synchronization:
+
+`supabase/migrations/20260615143118_sync_interview_modules_library.sql`
+
 New tables:
 
 - `interview_modules`
@@ -39,6 +45,18 @@ Extended tables:
 
 - `interview_questions`
 - `interview_attempts`
+- `interview_modules` with an optional `learning_module_id` link
+
+## Module Library Integration
+
+Interview Prep does not maintain a separate predefined learning-module list.
+On load, each active Modules Library item is linked to an interview module.
+Existing interview modules with matching names are reused, and missing links
+are created without deleting historical questions or attempts.
+
+Project and resume question categories remain internal Interview Prep modules
+because they are contextual practice modes rather than learning-library
+modules.
 
 ## Readiness Formula
 
@@ -77,13 +95,16 @@ The Gemini key is never returned to the browser.
 3. Apply the Interview Prep migration.
 4. Deploy `supabase/functions/interview-ai` with JWT verification enabled.
 5. Sign in and open `/interview-prep`.
-6. Generate three questions.
-7. Save a draft, evaluate it, and confirm feedback persists.
-8. Re-attempt the same question and confirm the improvement delta.
-9. Generate a revision recap.
-10. Run and complete a five-question mock interview.
-11. Generate a seven-day plan.
-12. Verify the page in light/dark mode and mobile/desktop layouts.
+6. Confirm the module selector matches the active Modules Library.
+7. Select a module and confirm topic suggestions belong to that module.
+8. Generate three questions and confirm they appear under that module.
+9. Expand a long question and confirm the full prompt is visible.
+10. Save a draft, evaluate it, and confirm feedback persists.
+11. Re-attempt the same question and confirm the improvement delta.
+12. Generate a revision recap.
+13. Run and complete a five-question mock interview.
+14. Generate a seven-day plan.
+15. Verify the page in light/dark mode and mobile/desktop layouts.
 
 ## Assumptions
 

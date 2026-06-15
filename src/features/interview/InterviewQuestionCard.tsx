@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { clsx } from "clsx";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleCard } from "@/components/ui/CollapsibleCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -30,6 +31,7 @@ type InterviewQuestionCardProps = {
   onToggle: () => void;
   question: InterviewQuestionWithDetails;
   revisionNote?: InterviewRevisionNote;
+  variant?: "card" | "embedded";
 };
 
 function formatDate(value: string) {
@@ -92,6 +94,7 @@ export function InterviewQuestionCard({
   onToggle,
   question,
   revisionNote,
+  variant = "card",
 }: InterviewQuestionCardProps) {
   const evaluatedAttempts = useMemo(
     () =>
@@ -162,10 +165,16 @@ export function InterviewQuestionCard({
     <CollapsibleCard
       isExpanded={isExpanded}
       onToggle={onToggle}
+      variant={variant}
       summary={
         <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div className="min-w-0">
-            <p className="line-clamp-2 text-sm font-semibold">
+            <p
+              className={clsx(
+                "whitespace-normal break-words text-sm font-semibold",
+                !isExpanded && "line-clamp-2",
+              )}
+            >
               {question.question}
             </p>
             <p className="mt-1 truncate text-xs text-ink-500 dark:text-white/45">

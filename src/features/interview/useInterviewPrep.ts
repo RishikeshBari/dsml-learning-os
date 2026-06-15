@@ -10,7 +10,6 @@ import {
 } from "@/features/interview/interviewAi";
 import {
   calculateReadiness,
-  interviewModuleNames,
   moduleStatus,
 } from "@/features/interview/interviewConfig";
 import { supabase } from "@/lib/supabase/client";
@@ -26,6 +25,7 @@ import type {
   InterviewSessionType,
   InterviewTopic,
   Json,
+  Module,
   Project,
   Topic,
 } from "@/types/database";
@@ -50,6 +50,7 @@ export type InterviewModuleWithStats = InterviewModule & {
 };
 
 export type InterviewPrepData = {
+  allModules: InterviewModuleWithStats[];
   attempts: InterviewAttemptWithFeedback[];
   modules: InterviewModuleWithStats[];
   projects: Project[];
@@ -65,9 +66,10 @@ export type GenerateQuestionsInput = {
   contextSource?: string;
   count: number;
   difficulty: InterviewDifficulty;
-  moduleId: string;
+  moduleId?: string;
   questionType: InterviewQuestionType;
   sessionType?: InterviewSessionType;
+  systemModuleName?: string;
   topicName: string;
 };
 
@@ -127,48 +129,78 @@ export function useInterviewPrep() {
         throw new Error("Interview Prep requires an authenticated user.");
       }
 
-      const modulesResult = await supabase
-        .from("interview_modules")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
-      let moduleRows = modulesResult.data;
-      const modulesError = modulesResult.error;
+      const [learningModulesResult, interviewModulesResult] = await Promise.all([
+        supabase
+          .from("modules")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_archived", false)
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true }),
+        supabase
+          .from("interview_modules")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true }),
+      ]);
 
-      if (modulesError) {
-        throw modulesError;
-      }
+      if (learningModulesResult.error) throw learningModulesResult.error;
+      if (interviewModulesResult.error) throw interviewModulesResult.error;
 
-      const existingNames = new Set(
-        (moduleRows ?? []).map((moduleItem) => moduleItem.name),
-      );
-      const missingModules = interviewModuleNames.filter(
-        (name) => !existingNames.has(name),
-      );
+      const learningModules = (learningModulesResult.data ?? []) as Module[];
+      let moduleRows = (interviewModulesResult.data ??
+        []) as InterviewModule[];
+      let modulesChanged = false;
 
-      if (missingModules.length > 0) {
-        const insertResult = await supabase.from("interview_modules").insert(
-          missingModules.map((name) => ({
-            name,
-            user_id: user.id,
-          })),
+      for (const learningModule of learningModules) {
+        const linkedModule = moduleRows.find(
+          (moduleItem) =>
+            moduleItem.learning_module_id === learningModule.id,
         );
 
-        if (insertResult.error) {
-          throw insertResult.error;
+        if (linkedModule) {
+          if (linkedModule.name !== learningModule.name) {
+            const updateResult = await supabase
+              .from("interview_modules")
+              .update({ name: learningModule.name })
+              .eq("id", linkedModule.id);
+
+            if (updateResult.error) throw updateResult.error;
+            modulesChanged = true;
+          }
+          continue;
         }
 
+        const legacyModule = moduleRows.find(
+          (moduleItem) =>
+            moduleItem.learning_module_id === null &&
+            moduleItem.name.toLowerCase() ===
+              learningModule.name.toLowerCase(),
+        );
+        const syncResult = legacyModule
+          ? await supabase
+              .from("interview_modules")
+              .update({ learning_module_id: learningModule.id })
+              .eq("id", legacyModule.id)
+          : await supabase.from("interview_modules").insert({
+              learning_module_id: learningModule.id,
+              name: learningModule.name,
+              user_id: user.id,
+            });
+
+        if (syncResult.error) throw syncResult.error;
+        modulesChanged = true;
+      }
+
+      if (modulesChanged) {
         const refreshedResult = await supabase
           .from("interview_modules")
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: true });
 
-        if (refreshedResult.error) {
-          throw refreshedResult.error;
-        }
-
-        moduleRows = refreshedResult.data;
+        if (refreshedResult.error) throw refreshedResult.error;
+        moduleRows = (refreshedResult.data ?? []) as InterviewModule[];
       }
 
       const [
@@ -239,14 +271,25 @@ export function useInterviewPrep() {
         throw errors[0];
       }
 
-      const moduleOrder = new Map<string, number>(
-        interviewModuleNames.map((name, index) => [name, index]),
+      const learningModuleOrder = new Map(
+        learningModules.map((moduleItem, index) => [moduleItem.id, index]),
       );
-      const modules = ([...(moduleRows ?? [])] as InterviewModule[]).sort(
-        (first, second) =>
-          (moduleOrder.get(first.name) ?? Number.MAX_SAFE_INTEGER) -
-          (moduleOrder.get(second.name) ?? Number.MAX_SAFE_INTEGER),
-      );
+      const allModules = [...moduleRows].sort((first, second) => {
+        const firstOrder =
+          first.learning_module_id === null
+            ? Number.MAX_SAFE_INTEGER
+            : (learningModuleOrder.get(first.learning_module_id) ??
+              Number.MAX_SAFE_INTEGER);
+        const secondOrder =
+          second.learning_module_id === null
+            ? Number.MAX_SAFE_INTEGER
+            : (learningModuleOrder.get(second.learning_module_id) ??
+              Number.MAX_SAFE_INTEGER);
+        return (
+          firstOrder - secondOrder ||
+          first.name.localeCompare(second.name)
+        );
+      });
       const topics = (topicsResult.data ?? []) as InterviewTopic[];
       const questions = (questionsResult.data ?? []) as InterviewQuestion[];
       const attempts = (attemptsResult.data ?? []) as InterviewAttempt[];
@@ -259,7 +302,7 @@ export function useInterviewPrep() {
         feedback: feedbackByAttempt.get(attempt.id) ?? null,
       }));
       const moduleById = new Map(
-        modules.map((moduleItem) => [moduleItem.id, moduleItem]),
+        allModules.map((moduleItem) => [moduleItem.id, moduleItem]),
       );
       const topicById = new Map(topics.map((topic) => [topic.id, topic]));
       const questionsWithDetails = questions.map((question) => ({
@@ -275,7 +318,7 @@ export function useInterviewPrep() {
           "General",
       }));
 
-      const modulesWithStats = modules.map((moduleItem) => {
+      const allModulesWithStats = allModules.map((moduleItem) => {
         const moduleQuestions = questions.filter(
           (question) => question.interview_module_id === moduleItem.id,
         );
@@ -326,8 +369,13 @@ export function useInterviewPrep() {
       });
 
       return {
+        allModules: allModulesWithStats,
         attempts: attemptsWithFeedback,
-        modules: modulesWithStats,
+        modules: allModulesWithStats.filter(
+          (moduleItem) =>
+            moduleItem.learning_module_id !== null &&
+            learningModuleOrder.has(moduleItem.learning_module_id),
+        ),
         projects: (projectsResult.data ?? []) as Project[],
         questions: questionsWithDetails,
         revisionNotes: (revisionNotesResult.data ??
@@ -358,8 +406,13 @@ export function useInterviewPrep() {
 
     if (existing) return existing;
 
+    const moduleItem = interviewQuery.data?.allModules.find(
+      (candidate) => candidate.id === moduleId,
+    );
     const linkedTopic = interviewQuery.data?.sourceTopics.find(
-      (topic) => topic.name.toLowerCase() === cleanName.toLowerCase(),
+      (topic) =>
+        topic.module_id === moduleItem?.learning_module_id &&
+        topic.name.toLowerCase() === cleanName.toLowerCase(),
     );
     const { data, error } = await supabase
       .from("interview_topics")
@@ -376,15 +429,41 @@ export function useInterviewPrep() {
     return data as InterviewTopic;
   }
 
-  async function createGeneratedQuestions(values: GenerateQuestionsInput) {
+  async function getOrCreateModule(values: GenerateQuestionsInput) {
     if (!user) throw new Error("You need to be signed in.");
-    const moduleItem = interviewQuery.data?.modules.find(
-      (candidate) => candidate.id === values.moduleId,
+
+    const existing = interviewQuery.data?.allModules.find(
+      (candidate) =>
+        candidate.id === values.moduleId ||
+        (values.systemModuleName &&
+          candidate.name.toLowerCase() ===
+            values.systemModuleName.toLowerCase()),
     );
 
-    if (!moduleItem) throw new Error("Select an interview module.");
+    if (existing) return existing;
+    if (!values.systemModuleName) {
+      throw new Error("Select a module from your Modules Library.");
+    }
 
-    const topic = await getOrCreateTopic(values.moduleId, values.topicName);
+    const { data, error } = await supabase
+      .from("interview_modules")
+      .insert({
+        learning_module_id: null,
+        name: values.systemModuleName,
+        user_id: user.id,
+      })
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    return data as InterviewModule;
+  }
+
+  async function createGeneratedQuestions(values: GenerateQuestionsInput) {
+    if (!user) throw new Error("You need to be signed in.");
+    const moduleItem = await getOrCreateModule(values);
+
+    const topic = await getOrCreateTopic(moduleItem.id, values.topicName);
     const result = await generateInterviewQuestions({
       context: values.context,
       count: values.count,
@@ -756,6 +835,8 @@ export function useInterviewPrep() {
         }\nAnswer: ${latest?.user_answer ?? "No answer"}`;
       });
       const moduleItem = interviewQuery.data?.modules.find(
+        (candidate) => candidate.id === session.module_id,
+      ) ?? interviewQuery.data?.allModules.find(
         (candidate) => candidate.id === session.module_id,
       );
       const summary = await generateMockSummary({

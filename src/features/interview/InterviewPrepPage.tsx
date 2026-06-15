@@ -128,11 +128,17 @@ function ModuleProgress({ moduleItem }: { moduleItem: InterviewModuleWithStats }
 
 function QuestionList({
   expandedIds,
+  expandedModuleIds,
+  groupByModule = true,
+  onModuleToggle,
   onToggle,
   questions,
   prep,
 }: {
   expandedIds: Set<string>;
+  expandedModuleIds?: Set<string>;
+  groupByModule?: boolean;
+  onModuleToggle?: (id: string) => void;
   onToggle: (id: string) => void;
   questions: InterviewQuestionWithDetails[];
   prep: ReturnType<typeof useInterviewPrep>;
@@ -146,34 +152,117 @@ function QuestionList({
     );
   }
 
+  const renderQuestion = (
+    question: InterviewQuestionWithDetails,
+    variant: "card" | "embedded" = "card",
+  ) => (
+    <InterviewQuestionCard
+      isExpanded={expandedIds.has(question.id)}
+      key={question.id}
+      onEvaluate={(answer) =>
+        prep.evaluateAnswer.mutateAsync({
+          answer,
+          questionId: question.id,
+        })
+      }
+      onRevise={() => prep.createRevision.mutateAsync(question.id)}
+      onSave={(answer) =>
+        prep.saveAnswer.mutateAsync({
+          answer,
+          questionId: question.id,
+        })
+      }
+      onToggle={() => onToggle(question.id)}
+      question={question}
+      revisionNote={prep.data?.revisionNotes.find(
+        (note) =>
+          note.module_id === question.interview_module_id &&
+          note.topic_id === question.interview_topic_id,
+      )}
+      variant={variant}
+    />
+  );
+
+  if (!groupByModule) {
+    return (
+      <div className="space-y-3">
+        {questions.map((question) => renderQuestion(question))}
+      </div>
+    );
+  }
+
+  const moduleGroups = Array.from(
+    questions.reduce(
+      (groups, question) => {
+        const groupId =
+          question.interview_module_id ?? question.moduleName;
+        const existing = groups.get(groupId);
+
+        if (existing) {
+          existing.questions.push(question);
+        } else {
+          groups.set(groupId, {
+            id: groupId,
+            moduleName: question.moduleName,
+            questions: [question],
+          });
+        }
+
+        return groups;
+      },
+      new Map<
+        string,
+        {
+          id: string;
+          moduleName: string;
+          questions: InterviewQuestionWithDetails[];
+        }
+      >(),
+    ),
+  )
+    .map(([, group]) => group)
+    .sort((first, second) =>
+      first.moduleName.localeCompare(second.moduleName),
+    );
+
   return (
     <div className="space-y-3">
-      {questions.map((question) => (
-        <InterviewQuestionCard
-          isExpanded={expandedIds.has(question.id)}
-          key={question.id}
-          onEvaluate={(answer) =>
-            prep.evaluateAnswer.mutateAsync({
-              answer,
-              questionId: question.id,
-            })
-          }
-          onRevise={() => prep.createRevision.mutateAsync(question.id)}
-          onSave={(answer) =>
-            prep.saveAnswer.mutateAsync({
-              answer,
-              questionId: question.id,
-            })
-          }
-          onToggle={() => onToggle(question.id)}
-          question={question}
-          revisionNote={prep.data?.revisionNotes.find(
-            (note) =>
-              note.module_id === question.interview_module_id &&
-              note.topic_id === question.interview_topic_id,
-          )}
-        />
-      ))}
+      {moduleGroups.map((group) => {
+        const attemptedCount = group.questions.filter((question) =>
+          question.attempts.some((attempt) => !attempt.is_draft),
+        ).length;
+
+        return (
+          <CollapsibleCard
+            isExpanded={expandedModuleIds?.has(group.id) ?? false}
+            key={group.id}
+            onToggle={() => onModuleToggle?.(group.id)}
+            summary={
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {group.moduleName}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-500 dark:text-white/45">
+                    {group.questions.length} question
+                    {group.questions.length === 1 ? "" : "s"} /{" "}
+                    {attemptedCount} attempted
+                  </p>
+                </div>
+                <StatusBadge tone={attemptedCount > 0 ? "mint" : "neutral"}>
+                  {attemptedCount > 0 ? "In practice" : "Not started"}
+                </StatusBadge>
+              </div>
+            }
+          >
+            <div className="divide-y divide-ink-100 dark:divide-white/10">
+              {group.questions.map((question) =>
+                renderQuestion(question, "embedded"),
+              )}
+            </div>
+          </CollapsibleCard>
+        );
+      })}
     </div>
   );
 }
@@ -196,6 +285,9 @@ export function InterviewPrepPage() {
   const [expandedQuestionIds, setExpandedQuestionIds] = useState<Set<string>>(
     new Set(),
   );
+  const [expandedQuestionModuleIds, setExpandedQuestionModuleIds] = useState<
+    Set<string>
+  >(new Set());
   const [expandedModuleIds, setExpandedModuleIds] = useState<Set<string>>(
     new Set(),
   );
@@ -208,10 +300,22 @@ export function InterviewPrepPage() {
   const [projectId, setProjectId] = useState("");
 
   useEffect(() => {
-    if (!moduleId && modules[0]) {
-      setModuleId(modules[0].id);
+    if (!modules.some((moduleItem) => moduleItem.id === moduleId)) {
+      setModuleId(modules[0]?.id ?? "");
     }
   }, [moduleId, modules]);
+
+  const selectedModule = modules.find(
+    (moduleItem) => moduleItem.id === moduleId,
+  );
+  const sourceTopicsForModule = useMemo(
+    () =>
+      (data?.sourceTopics ?? []).filter(
+        (topic) =>
+          topic.module_id === selectedModule?.learning_module_id,
+      ),
+    [data?.sourceTopics, selectedModule?.learning_module_id],
+  );
 
   const evaluatedAttempts = useMemo(
     () =>
@@ -276,6 +380,18 @@ export function InterviewPrepPage() {
       ].some((value) => value.toLowerCase().includes(normalizedSearch));
     });
   }, [questions, search]);
+
+  useEffect(() => {
+    if (!search.trim()) return;
+    setExpandedQuestionModuleIds(
+      new Set(
+        filteredQuestions.map(
+          (question) =>
+            question.interview_module_id ?? question.moduleName,
+        ),
+      ),
+    );
+  }, [filteredQuestions, search]);
   const activeMock = sessions.find(
     (session) =>
       session.session_type === "mock" && session.status === "in_progress",
@@ -306,6 +422,15 @@ export function InterviewPrepPage() {
     });
   }
 
+  function toggleQuestionModule(id: string) {
+    setExpandedQuestionModuleIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!moduleId) return;
@@ -319,6 +444,14 @@ export function InterviewPrepPage() {
     });
     setExpandedQuestionIds(
       new Set(generated.map((question) => question.id)),
+    );
+    setExpandedQuestionModuleIds(
+      new Set(
+        generated.map(
+          (question) =>
+            question.interview_module_id ?? "Interview Prep",
+        ),
+      ),
     );
   }
 
@@ -336,24 +469,19 @@ export function InterviewPrepPage() {
               `Next action: ${project.next_action ?? "Not provided"}`,
             ].join("\n")
           : "";
-    const targetModule = modules.find((moduleItem) =>
-      resumeMode === "resume"
-        ? moduleItem.name === "Resume-Based Questions"
-        : moduleItem.name === "Projects",
-    );
-
-    if (!targetModule || !context.trim()) return;
+    if (!context.trim()) return;
 
     const generated = await prep.generateQuestions.mutateAsync({
       context,
       contextSource: resumeMode,
       count: questionCount,
       difficulty: "medium",
-      moduleId: targetModule.id,
       questionType:
         resumeMode === "resume" ? "resume_based" : "project_based",
       sessionType:
         resumeMode === "resume" ? "resume_based" : "project_defense",
+      systemModuleName:
+        resumeMode === "resume" ? "Resume-Based Questions" : "Projects",
       topicName:
         resumeMode === "resume"
           ? "Resume profile"
@@ -361,6 +489,14 @@ export function InterviewPrepPage() {
     });
     setExpandedQuestionIds(
       new Set(generated.map((question) => question.id)),
+    );
+    setExpandedQuestionModuleIds(
+      new Set(
+        generated.map(
+          (question) =>
+            question.interview_module_id ?? "Interview Prep",
+        ),
+      ),
     );
     setActiveTab("practice");
   }
@@ -716,9 +852,15 @@ export function InterviewPrepPage() {
                 </span>
                 <select
                   className="mt-1.5 h-10 w-full rounded-lg border border-ink-200 px-3 text-sm outline-none focus:border-mint-500 dark:border-white/10"
-                  onChange={(event) => setModuleId(event.target.value)}
+                  onChange={(event) => {
+                    setModuleId(event.target.value);
+                    setTopicName("");
+                  }}
                   value={moduleId}
                 >
+                  {modules.length === 0 ? (
+                    <option value="">Add a module in the Modules Library</option>
+                  ) : null}
                   {modules.map((moduleItem) => (
                     <option key={moduleItem.id} value={moduleItem.id}>
                       {moduleItem.name}
@@ -738,7 +880,7 @@ export function InterviewPrepPage() {
                   value={topicName}
                 />
                 <datalist id="interview-topic-options">
-                  {data?.sourceTopics.map((topic) => (
+                  {sourceTopicsForModule.map((topic) => (
                     <option key={topic.id} value={topic.name} />
                   ))}
                 </datalist>
@@ -817,19 +959,31 @@ export function InterviewPrepPage() {
               actions={
                 <>
                   <Button
-                    onClick={() =>
+                    onClick={() => {
                       setExpandedQuestionIds(
                         new Set(
                           filteredQuestions.map((question) => question.id),
                         ),
-                      )
-                    }
+                      );
+                      setExpandedQuestionModuleIds(
+                        new Set(
+                          filteredQuestions.map(
+                            (question) =>
+                              question.interview_module_id ??
+                              question.moduleName,
+                          ),
+                        ),
+                      );
+                    }}
                     variant="secondary"
                   >
                     Expand all
                   </Button>
                   <Button
-                    onClick={() => setExpandedQuestionIds(new Set())}
+                    onClick={() => {
+                      setExpandedQuestionIds(new Set());
+                      setExpandedQuestionModuleIds(new Set());
+                    }}
                     variant="secondary"
                   >
                     Collapse all
@@ -846,6 +1000,8 @@ export function InterviewPrepPage() {
             />
             <QuestionList
               expandedIds={expandedQuestionIds}
+              expandedModuleIds={expandedQuestionModuleIds}
+              onModuleToggle={toggleQuestionModule}
               onToggle={toggleQuestion}
               prep={prep}
               questions={filteredQuestions}
@@ -905,6 +1061,7 @@ export function InterviewPrepPage() {
               </section>
               <QuestionList
                 expandedIds={new Set([activeMockQuestion.id])}
+                groupByModule={false}
                 onToggle={() => undefined}
                 prep={prep}
                 questions={[activeMockQuestion]}
@@ -1142,6 +1299,12 @@ export function InterviewPrepPage() {
                         setSearch(question?.question ?? "");
                         if (question) {
                           setExpandedQuestionIds(new Set([question.id]));
+                          setExpandedQuestionModuleIds(
+                            new Set([
+                              question.interview_module_id ??
+                                question.moduleName,
+                            ]),
+                          );
                         }
                         setActiveTab("practice");
                       }}

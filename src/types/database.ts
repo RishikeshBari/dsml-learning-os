@@ -651,6 +651,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          learning_module_id: string | null;
           name: string;
           readiness_score: number;
           status: InterviewModuleStatus;
@@ -660,6 +661,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          learning_module_id?: string | null;
           name: string;
           readiness_score?: number;
           status?: InterviewModuleStatus;
@@ -669,6 +671,7 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: string;
+          learning_module_id?: string | null;
           name?: string;
           readiness_score?: number;
           status?: InterviewModuleStatus;

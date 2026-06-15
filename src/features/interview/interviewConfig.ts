@@ -7,17 +7,6 @@ import type {
   InterviewQualityLabel,
 } from "@/types/database";
 
-export const interviewModuleNames = [
-  "Python",
-  "SQL",
-  "Statistics",
-  "Machine Learning",
-  "Deep Learning",
-  "Projects",
-  "Resume-Based Questions",
-  "HR / Behavioral Questions",
-] as const;
-
 export const difficultyLabels: Record<InterviewDifficulty, string> = {
   easy: "Easy",
   hard: "Hard",
