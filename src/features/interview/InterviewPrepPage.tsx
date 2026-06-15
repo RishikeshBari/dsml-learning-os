@@ -252,6 +252,13 @@ export function InterviewPrepPage() {
     .filter((moduleItem) => moduleItem.attemptedQuestionCount > 0)
     .reverse()
     .slice(0, 3);
+  const recommendedModules = [
+    ...weakestModules,
+    ...modules.filter(
+      (moduleItem) =>
+        !weakestModules.some((weakest) => weakest.id === moduleItem.id),
+    ),
+  ].slice(0, 3);
   const latestPractice =
     evaluatedAttempts
       .map((attempt) => attempt.attempted_at)
@@ -460,10 +467,7 @@ export function InterviewPrepPage() {
                 title="Recommended next 3 actions"
               />
               <div className="mt-4 space-y-2">
-                {(weakestModules.length > 0
-                  ? weakestModules
-                  : modules.slice(0, 3)
-                ).map((moduleItem, index) => (
+                {recommendedModules.map((moduleItem, index) => (
                   <button
                     className="flex w-full items-center gap-3 rounded-lg border border-ink-200/80 px-3 py-3 text-left transition hover:bg-ink-50 dark:border-white/10 dark:hover:bg-white/5"
                     key={moduleItem.id}
